@@ -1,0 +1,45 @@
+{
+  "name": "node-background-task",
+  "preferGlobal": "false",
+  "version": "0.0.0",
+  "author": "Kinvey <support@kinvey.com>",
+  "description": "Run Node.js tasks on multiple instances.",
+  "contributors": [ 
+    {
+      "name": "Brian Wilson",
+      "email": "brian@kinvey.com"
+    }, 
+    {
+      "name": "Ivan Stoyanov",
+      "email": "ivan@kinvey.com"
+    } 
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kinvey/node-background-task.git"
+  },
+  "keywords": [
+    "node",
+    "task",
+    "background",
+    "redis"
+  ],
+  "dependencies" : {
+    "redis"   :  "*"
+  },
+  "analyze": false,
+  "devDependencies": {
+    "should" :  "*",
+    "mocha"  :  "*"
+  },
+  "licenses": [
+    {
+      "type": "Apache 2.0",
+      "url": "https://github.com/Kinvey/node-background-task/raw/master/LICENSE"
+    }
+  ],
+  "engines": {
+    "node": ">=0.6"
+  }
+}
+
