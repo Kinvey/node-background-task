@@ -19,8 +19,7 @@
 var redis = require("redis")
   , EventEmitter = require('events').EventEmitter
   , util = require('util')
-  , uuid = require("node-uuid")
-  , message = require('lib/messaging')
+  , message = require('./lib/messaging')
   , wrapError;
 
 
@@ -30,10 +29,21 @@ wrapError = function(error){ console.log(error); };
 // Two clients required, pubsub and databas
 // Wrap our module
 exports.connect = (function(){
-    var BackgroundTask = function(options){
+    var callbacks = []
+      , makeTimeoutError
+      , BackgroundTask;
+
+    BackgroundTask = function(options){
         EventEmitter.call(this);
+
         this.msgBus = new message.connect(options);
+        this.timeout = 5000; // 5 second defualt timeout
         
+        
+        if (options && options.timeout){
+            this.timeout = options.timeout;
+        }
+
         if (options && options.isResponder){
             var that = this;
             this.msgBus.on('dataAvailable', function(body){
@@ -41,7 +51,6 @@ exports.connect = (function(){
             });
         }
     };
-
 
     // Inherit EventEmitter's methods
     util.inherits(BackgroundTask, EventEmitter);
@@ -53,8 +62,36 @@ exports.connect = (function(){
     };
 
     BackgroundTask.prototype.addTask = function(msg, callback){
-        var that = this;
-        this.msgBus.sendMessage(this.msgBus.makeId(), msg, callback);
+        var that = this
+          , id = message.makeId()
+          , cb, timeoutId, timedoutCb, msgToSend;
+
+        callbacks[id] = callback;
+
+        cb = function(reply){
+            var origCallback = callbacks[id];
+            clearTimeout(timeoutId);
+            origCallback(reply);
+            delete callbacks[id];
+        };
+
+        timedoutCb = function(){
+            var origCallback = callbacks[id];
+            // replace the "orig" callback with an empty function
+            // in case the request still completes in the future and
+            // tries to call our callback.
+            callbacks[id] = function(reply){};
+
+            // Return an error
+            origCallback(makeTimeoutError());
+        };
+
+        msgToSend = {
+            taskId: id,
+            taskDetails: msg
+        };
+
+        this.msgBus.sendMessage(id, msgToSend, cb);
         this.msgBus.on('responseReady', function(resp) { that.emit('taskDone', resp); });
     };
 
@@ -62,6 +99,13 @@ exports.connect = (function(){
         var that = this;
         that.msgBus.sendResponse(taskId, status, msg);
     };
+
+    
+    makeTimeoutError = function(){
+        console.log("Fail");
+        return "FAIL!";
+    };
+
 
     return function(options){
         return new BackgroundTask(options);
