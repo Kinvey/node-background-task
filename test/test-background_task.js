@@ -129,7 +129,6 @@ describe('node-background-task', function(){
                 outputHash: "someOutputHash",
                 host: "0.0.0.0",
                 port: "6379",
-                password: "12345",
                 isWorker: true
             });
             task.should.be.a('object');

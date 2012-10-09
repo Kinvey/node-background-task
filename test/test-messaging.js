@@ -21,7 +21,6 @@ describe('messaging', function(){
             outputHash: "someOutputHash",
             host: "0.0.0.0",
             port: "6379",
-            password: "12345",
             isResponder: true
           });
           msgBus.should.be.an.instanceOf(messaging.MessageBus);
