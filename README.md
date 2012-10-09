@@ -8,7 +8,7 @@ Distributed task execution framework for [node](http://nodejs.org), backed by [r
 
 
 ```js
-var bgTask = required('background-task').connect({task: 'echoBack'})
+var bgTask = require('background-task').connect({task: 'echoBack'})
   , task;
 
 task = {
@@ -46,10 +46,17 @@ where only N tasks can be pending on a certain key prior to failures.
 
 ### Task Workers
 
+Processing for a worker is kicked off by the `TASK_AVAILABLE` event,
+once you get this event you can either accept the task, or ignore the
+task.  If multiple workers accept the task then the first to accept
+will handle the task.
+
 * `connect(options)` -- Create a new instance of a BackgroundTask,
   allowing you to specify options.  You must specify `isWorker: true`
   to register as a background worker.
+* `acceptTask(callback)` -- Accepts a task from the queue to start processing.
 * `completeTask(taskId, status, msg)` -- Mark a task as complete.
+
 
 ### Events
 
