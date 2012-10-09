@@ -12,4 +12,15 @@ logs
 results
 
 node_modules
-npm-debug.log
+npm-debug.log*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+.elc
+auto-save-list
+tramp
+.\#*
+
+# Org-mode
+.org-id-locations
+*_archive
