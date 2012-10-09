@@ -1,8 +1,8 @@
-/*global describe, it */
+/*global describe, it, beforeEach, afterEach */
 "use strict";
 
 var sinon = require('sinon')
-  , background_task = require('../')
+  , background_task = require('../lib/background_task')
   , should = require('should');
 
 
