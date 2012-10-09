@@ -54,7 +54,8 @@ will handle the task.
 * `connect(options)` -- Create a new instance of a BackgroundTask,
   allowing you to specify options.  You must specify `isWorker: true`
   to register as a background worker.
-* `acceptTask(callback)` -- Accepts a task from the queue to start processing.
+* `acceptTask(callback)` -- Accepts a task from the queue to start processing,
+  callback must accept two args, `id` and a paramater for the task.
 * `completeTask(taskId, status, msg)` -- Mark a task as complete.
 
 

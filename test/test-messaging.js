@@ -51,10 +51,12 @@ describe('messaging', function(){
                   rcPubSub.publish("msgChannels:broadcast", "0xdeadbeef");
               };
 
-            mBus.on('data_available', function(id, msg){
-                mBus.shutdown();
-                JSON.stringify(msg).should.eql(message);
-                done();
+            mBus.on('data_available', function(){
+                mBus.acceptMessage(function(id, msg){
+                    mBus.shutdown();
+                    JSON.stringify(msg).should.eql(message);
+                    done();
+                });
             });
 
             setTimeout(cback, delay);
@@ -184,8 +186,10 @@ describe('messaging', function(){
             it('should not allow more tasks to complete', function(done){
                 var cback1, cback2;
 
-                mBusWorker.on('data_available', function(id, msg){
-                    mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                mBusWorker.on('data_available', function(){
+                    mBusWorker.acceptMessage(function(id, msg){
+                        mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                    });
                 });
 
                 cback1 = function(){
@@ -214,8 +218,10 @@ describe('messaging', function(){
         describe('#sendMessage', function(){
             it('should call callback', function(done){
                 var cback;
-                mBusWorker.on('data_available', function(id, msg){
-                    mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                mBusWorker.on('data_available', function(){
+                    mBusWorker.acceptMessage(function(id, msg){
+                        mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                    });
                 });
 
                 cback = function(){
@@ -247,8 +253,10 @@ describe('messaging', function(){
                   };
 
 
-                mBusWorker.on('data_available', function(id, msg){
-                    mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                mBusWorker.on('data_available', function(){
+                    mBusWorker.acceptMessage(function(id, msg){
+                        mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                    });
                 });
 
 
@@ -269,8 +277,10 @@ describe('messaging', function(){
                           , msg = {body: str}
                           , cback;
 
-                        mBusWorker.on('data_available', function(id, msg){
-                            mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                        mBusWorker.on('data_available', function(){
+                            mBusWorker.acceptMessage(function(id, msg){
+                                mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                            });
                         });
 
                         cback = function(){
@@ -289,8 +299,10 @@ describe('messaging', function(){
             });
             it('should reject message that are not JSON', function(done){
                 var cback;
-                mBusWorker.on('data_available', function(id, msg){
-                    mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                mBusWorker.on('data_available', function(){
+                    mBusWorker.acceptMessage(function(id, msg){
+                        mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                    });
                 });
 
                 cback = function(){
