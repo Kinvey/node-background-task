@@ -3,8 +3,7 @@
 node-background-task
 ====================
 
-Distributed task execution framework for [node](http://nodejs.org)
-backed by [redis](http://redis.io/).
+Distributed task execution framework for [node](http://nodejs.org), backed by [redis](http://redis.io/).
 [![Build Status](https://travis-ci.org/Kinvey/node-background-task.png)](https://travis-ci.org/Kinvey/node-background-task)
 
 
@@ -57,7 +56,9 @@ where only N tasks can be pending on a certain key prior to failures.
 node-background-task uses the following events:
 
 * `TASK_AVAILABLE` -- There is data available for a background worker.
-* `TASK_DONE` -- A task has finished and the response is ready.
+* `TASK_DONE` -- A task has finished and the response is ready, task
+  may not be successful, just complete.
+* `TASK_ERROR` -- Something went wrong.
 
 ## Features
 

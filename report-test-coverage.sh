@@ -12,5 +12,5 @@ TMPDIR=`mktemp -d /tmp/nbg-coverage.XXXXXXX `
 OURDIR=`pwd`
 
 jscoverage --exclude=node_modules --exclude=.git --no-instrument=test $OURDIR $TMPDIR
-sed -i -- 's/--reporter list/--reporter html-cov/' $TMPDIR/test/mocha.opts
+sed -i -- 's/--reporter spec/--reporter html-cov/' $TMPDIR/test/mocha.opts
 (cd $TMPDIR &&  npm install && npm test > $OURDIR/test-coverage.html)

@@ -46,7 +46,7 @@ exports.connect = (function(){
 
         if (options && options.isResponder){
             var that = this;
-            this.msgBus.on('dataAvailable', function(body){
+            this.msgBus.on('data_available', function(id, body){
                 that.emit('taskAvailable', body);
             });
         }
