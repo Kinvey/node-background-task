@@ -8,11 +8,11 @@ var sinon = require('sinon')
   , delay = 30; // This allows object creation to always finish
 
 
-describe('messaging', function(){
+describe('Test Limits', function(){
     var taskLimit, rc, task;
 
     before(function(done){
-        taskLimit = new limits.TaskLimit({taskKey: "a"});
+        taskLimit = new limits.TaskLimit({taskKey: "a",  maxTasksPerKey: 5});
         rc = redis.createClient();
         rc.flushall();
         task = {a: "kid1234", msg: "Hi Mom!"};
@@ -27,6 +27,38 @@ describe('messaging', function(){
     afterEach(function(done){
         rc.flushall();
         done();
+    });
+
+    describe('Error Handling', function(){
+        it('should not create an object without a task key', function(){
+            (function(){
+                var hi = new limits.TaskLimit();
+            }).should.throw('I need a task key!');
+        });
+
+        it('should not start invalid tasks', function(){
+            var tl = new limits.TaskLimit({taskKey: 'a'})
+              , cb = function(res){
+                  res.should.be.an.instanceOf(Error);
+                  res.message.should.equal('Invalid task, not running.');
+              };
+
+            tl.startTask(null, cb);
+            tl.startTask(undefined, cb);
+            tl.startTask({}, cb);
+            tl.startTask({b: "x"}, cb);            
+
+        });
+
+        it('should not stop invalid tasks', function(){
+            var tl = new limits.TaskLimit({taskKey: 'a'});
+            (function(){tl.stopTask(null); }).should.throw("Invalid task, can't stop.");
+            (function(){tl.stopTask(undefined); }).should.throw("Invalid task, can't stop.");
+            (function(){tl.stopTask({}); }).should.throw("Invalid task, can't stop.");
+            (function(){tl.stopTask({b: "x"}); }).should.throw("Invalid task, can't stop.");
+
+        });
+
     });
 
     describe('#startTask', function(){
