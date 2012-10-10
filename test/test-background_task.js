@@ -40,8 +40,8 @@ describe('node-background-task', function(){
                 var cb, tid;
                 bgTaskWorker.on('TASK_AVAILABLE', function(){
                     bgTaskWorker.acceptTask(function(id, msg){
-                        tid = msg.taskId;
-                        bgTaskWorker.completeTask(msg.taskId, 'SUCCESS', msg);
+                        tid = id;
+                        bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                     });
                 });
 
@@ -62,7 +62,7 @@ describe('node-background-task', function(){
                 var cb;
                 bgTaskWorker.on('TASK_AVAILABLE',  function(){
                     bgTaskWorker.acceptTask(function(id, msg){
-                        bgTaskWorker.completeTask(msg.taskId, 'SUCCESS', msg);
+                        bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                         done();
                     });
                 });
@@ -77,20 +77,17 @@ describe('node-background-task', function(){
             it('should emit TASK_ERROR if something goes wrong');
             // it('should emit TASK_ERROR if something goes wrong', function(done){
             //     var i;
-            //     bgTaskWorker.on('TASK_AVAILABLE', function(id, msg){
-            //         setTimeout(function(){
-            //             bgTaskWorker.completeTask(msg.taskId, 'SUCCESS', msg);
-            //         }, 1000);
+            //     bgTaskWorker.on('TASK_AVAILABLE', function(){
+            //         bgTaskWorker.acceptTask(function(id, msg){
+            //             bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+            //         });
             //     });
 
             //     bgTaskWorker.on('TASK_ERROR', done);
 
             //     for (i = 0; i < 10; i = i + 1){
-            //         setTimeout(function(){
-            //             bgTask.addTask({kid: "kid123", body: "hi"}, function(){});
-            //         }, i * 100);
+            //             bgTask.addTask({kid: "kid123", body: "hi"}, function(id, reply){console.log(reply)});
             //     }
-                
 
             // });
             it('should emit both TASK_ERROR and TASK_DONE if there was an error');
@@ -99,8 +96,7 @@ describe('node-background-task', function(){
                 bgTaskWorker.on('TASK_AVAILABLE', function(){
                     bgTaskWorker.acceptTask(function(id, msg){
                         should.exist(id);
-                        msg.taskId.should.eql(id);
-                        msg.taskDetails.should.eql({kid: "kid1234", body: "test"});
+                        msg.should.eql({kid: "kid1234", body: "test"});
                         done();
                     });
                 });
@@ -149,7 +145,7 @@ describe('node-background-task', function(){
             var cb;
             bgTaskWorker.on('TASK_AVAILABLE', function(){
                 bgTaskWorker.acceptTask(function(id, msg){
-                    bgTaskWorker.completeTask(msg.taskId, 'SUCCESS', msg);
+                    bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                     done();
                 });
             });
@@ -174,7 +170,7 @@ describe('node-background-task', function(){
                 var cb;
                 bgTaskWorker.on('TASK_AVAILABLE', function(){
                     bgTaskWorker.acceptTask(function(id, msg){
-                        bgTaskWorker.completeTask(msg.taskId, 'SUCCESS', msg);
+                        bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                     });
                 });
 
@@ -193,7 +189,7 @@ describe('node-background-task', function(){
                 bgTaskWorker.on('TASK_AVAILABLE', function(){
                     bgTaskWorker.acceptTask(function(id, msg){
                         setTimeout(function(){
-                            bgTaskWorker.completeTask(msg.taskId, 'SUCCESS', msg);
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                         }, delay*10);
                     });
                 });
@@ -216,7 +212,7 @@ describe('node-background-task', function(){
                 bgTaskWorker.on('TASK_AVAILABLE', function(){
                     bgTaskWorker.acceptTask(function(id, msg){
                         setTimeout(function(){
-                            bgTaskWorker.completeTask(msg.taskId, 'SUCCESS', msg);
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                         }, delay+1);
                     });
                 });
@@ -255,7 +251,7 @@ describe('node-background-task', function(){
 
                 bgTaskWorker.on('TASK_AVAILABLE', function(){
                     bgTaskWorker.acceptTask(function(id, msg){
-                        bgTaskWorker.completeTask(msg.taskId, 'SUCCESS', msg);
+                        bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                     });
                 });
 
