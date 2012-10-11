@@ -130,25 +130,6 @@ describe('messaging', function(){
 
             // });
 
-            it('should handle an error', function(done){
-                var mBus = messaging.connect()
-                  , cback = function(){
-                      rc.hset(mBus.responseHash, "0xdeadbeef", '{"isError": true, "message": "testError", "debugMessage":"Hi"}');
-                      rc.publish(mBus.listenChannel, "0xdeadbeef FAILED");
-                  };
-
-                mBus.on('error', function(err){
-                    mBus.shutdown();
-                    err.should.be.an.instanceOf(Error);
-                    err.message.should.equal('testError');
-                    err.debugMessage.should.equal('Hi');
-                    done();
-                });
-
-                setTimeout(cback, delay);
-
-            });
-
             it('should handle a mal-formed message', function(done){
                 var mBus = messaging.connect()
                   , cback = function(){

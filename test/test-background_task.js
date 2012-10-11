@@ -90,6 +90,8 @@ describe('node-background-task', function(){
             //     }
 
             // });
+            it('should handle an error');
+
             it('should emit both TASK_ERROR and TASK_DONE if there was an error');
             it('should have the task when TASK_AVAILABLE is emitted', function(done){
                 var cb;
