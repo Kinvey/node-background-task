@@ -90,7 +90,25 @@ describe('node-background-task', function(){
             //     }
 
             // });
-            it('should handle an error');
+            it('should handle an error', function(done){
+                var mm = 'I can haz cheezburger'
+                  , dm = 'I like turtles';
+                bgTaskWorker.on('TASK_AVAILABLE', function(){
+                    bgTaskWorker.acceptTask(function(id, msg){
+                        var err = new Error(mm);
+                        err.debugMessage = dm;
+                        bgTaskWorker.completeTask(id, 'FAILED', err);
+                    });
+                });
+
+                bgTask.on('error', function(){});
+                bgTask.addTask({kid: "kid1234", body: "test"}, function(id, reply){
+                    reply.should.be.an.instanceOf(Error);
+                    reply.message.should.equal(mm);
+                    reply.debugMessage.should.equal(dm);
+                    done();
+                });
+            });
 
             it('should emit both TASK_ERROR and TASK_DONE if there was an error');
             it('should have the task when TASK_AVAILABLE is emitted', function(done){
