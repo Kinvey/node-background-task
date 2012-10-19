@@ -61,7 +61,11 @@ describe('messaging', function(){
             setTimeout(cback, delay);
 
         });
-        it('should verify that authentication works');
+        it('should verify that authentication works', function(done){
+            var mBus = messaging.connect({password: 'hiFriends'});
+            mBus.on('error', function(){mBus.shutdown();done();});
+
+        });
     });
 
     describe('MessageBus', function(){
@@ -95,40 +99,54 @@ describe('messaging', function(){
                 done();
             });
 
-            // TODO: FIXME
-            // it('should handle bad items on the worker queue', function(done){
-            //     var mBus = messaging.connect({isResponder: true, dataQueue: "biwq", broadcastChannel: "biwqC"})
-            //       , cback = function(){
-            //           rc.rpush(mBus.dataQueue, "this is not json");
-            //           rc.publish(mBus.broadcastChannel, "0xdeadbeef");
-            //       };
 
-            //     mBus.on('error', function(err){
-            //         mBus.shutdown();
-            //         err.should.be.an.instanceOf(Error);
-            //         err.message.should.match(/^Bad data in sent message/);
-            //         done();
-            //     });
+            it('should handle bad items on the worker queue', function(done){
+                var mBus = messaging.connect({isResponder: true, dataHash: "biwq", broadcastChannel: "biwqC"})
+                  , cback = function(){
+                      rc.hset(mBus.dataHash, "0xdeadbeef", "this is not json");
+                      rc.publish(mBus.broadcastChannel, "0xdeadbeef");
+                  };
 
-            //     setTimeout(cback, delay + 10);
+                mBus.on('data_available', function(id){
+                    mBus.acceptMessage(id, function(rep){
+                        done(new Error("Sigh"));
+                    });
+                });
 
-            // });
+                mBus.on('error', function(err){
+                    mBus.shutdown();
+                    err.should.be.an.instanceOf(Error);
+                    err.message.should.match(/^Bad data in sent message/);
+                    done();
+                });
 
-            // it('should handle no item on the worker queue', function(done){
-            //     var mBus = messaging.connect({isResponder: true, dataQueue: "niwq", broadcastChannel: "niwqC"})
-            //       , cback = function(){
-            //           rc.publish(mBus.broadcastChannel, "0xdeadbeef");
-            //       };
-            //     mBus.on('error', function(err){
-            //         mBus.shutdown();
-            //         err.should.be.an.instanceOf(Error);
-            //         err.message.should.equal('No data in sent message');
-            //         done();
-            //     });
+                setTimeout(cback, delay + 10);
 
-            //     setTimeout(cback, delay + 10);
+            });
 
-            // });
+            it('should handle no item on the worker queue', function(done){
+                var mBus = messaging.connect({isResponder: true, dataQueue: "niwq", broadcastChannel: "niwqC"})
+                  , cback = function(){
+                      rc.publish(mBus.broadcastChannel, "0xdeadbeef");
+                  };
+
+                mBus.on('data_available', function(id){
+                    mBus.acceptMessage(id, function(rep){
+                        done(new Error("Sigh"));
+                    });
+                });
+
+
+                mBus.on('error', function(err){
+                    mBus.shutdown();
+                    err.should.be.an.instanceOf(Error);
+                    err.message.should.equal('No data in sent message');
+                    done();
+                });
+
+                setTimeout(cback, delay + 10);
+
+            });
 
             it('should handle a mal-formed message', function(done){
                 var mBus = messaging.connect()

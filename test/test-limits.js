@@ -46,7 +46,7 @@ describe('Test Limits', function(){
             tl.startTask(null, cb);
             tl.startTask(undefined, cb);
             tl.startTask({}, cb);
-            tl.startTask({b: "x"}, cb);            
+            tl.startTask({b: "x"}, cb);
 
         });
 
@@ -73,20 +73,29 @@ describe('Test Limits', function(){
                 }, delay);
             });
         });
+
         it('should max out at the max number of connections', function(done){
-            var max = taskLimit.maxTasksPerKey, i;
-            for (i = 0; i <= max; i = i + 1){
-                taskLimit.startTask(task);
+            var max = taskLimit.maxTasksPerKey, i, fn;
+
+            fn = function(){
+                taskLimit.startTask(task, function(v){
+                    v.should.not.be.an.instanceOf(Error);
+                });
+            };
+
+            for (i = 0; i < max; i = i + 1){
+                setTimeout(fn, i*10);
             }
-            
+
             setTimeout(function(){
                 taskLimit.startTask(task, function(v){
                     v.should.be.an.instanceOf(Error);
                     v.message.should.equal('Too many tasks');
                     done();
                 });
-            }, delay);
+            }, (max+1)*10);
         });
+
         it('should handle 0 wrap-around', function(done){
             taskLimit.stopTask(task);
             taskLimit.stopTask(task);
@@ -98,9 +107,10 @@ describe('Test Limits', function(){
                     done();
                 });
             }, delay);
-            
+
         });
     });
+
     describe('#stopTask', function(){
         it('should decrement the task counter', function(done){
             var key = taskLimit.redisKeyPrefix+task.a;
@@ -137,7 +147,7 @@ describe('Test Limits', function(){
             taskLimit.startTask(task, function(v){
                 taskLimit.stopTask(task);
             });
-            
+
             setTimeout(function(){
                 taskLimit.stopTask(task);
                 taskLimit.stopTask(task);

@@ -74,22 +74,22 @@ describe('node-background-task', function(){
 
             });
 
-            it('should emit TASK_ERROR if something goes wrong');
-            // it('should emit TASK_ERROR if something goes wrong', function(done){
-            //     var i;
-            //     bgTaskWorker.on('TASK_AVAILABLE', function(id){
-            //         bgTaskWorker.acceptTask(id, function(msg){
-            //             bgTaskWorker.completeTask(id, 'SUCCESS', msg);
-            //         });
-            //     });
+            it('should emit TASK_ERROR if something goes wrong', function(done){
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(reply){
+                        bgTaskWorker.completeTask(id, reply);
+                    });
+                });
 
-            //     bgTaskWorker.on('TASK_ERROR', done);
+                bgTask.on('TASK_ERROR', function(err){
+                    done();
+                });
 
-            //     for (i = 0; i < 10; i = i + 1){
-            //             bgTask.addTask({kid: "kid123", body: "hi"}, function(id, reply){console.log(reply);});
-            //     }
+                bgTask.addTask('', function(id, d){
+                    d.should.be.an.instanceOf(Error);
+                });
+            });
 
-            // });
             it('should handle an error', function(done){
                 var mm = 'I can haz cheezburger'
                   , dm = 'I like turtles';
@@ -110,7 +110,6 @@ describe('node-background-task', function(){
                 });
             });
 
-            it('should emit both TASK_ERROR and TASK_DONE if there was an error');
             it('should have the task when TASK_AVAILABLE is emitted', function(done){
                 var cb;
                 bgTaskWorker.on('TASK_AVAILABLE', function(id){
@@ -182,7 +181,15 @@ describe('node-background-task', function(){
     describe('BackgroundTask', function(){
 
         describe('#end', function(){
-            it('should not allow more tasks to complete');
+            it('should not allow more tasks to complete', function(done){
+                var t = background_task.connect({taskKey: "hi"});
+                t.end();
+                t.addTask({hi: "test"}, function(id, v){
+                    v.should.be.an.instanceOf(Error);
+                    v.message.should.equal('Attempt to use shutdown MessageBus.');
+                    done();
+                });
+            });
         });
 
         describe('#addTask', function(){
@@ -251,62 +258,72 @@ describe('node-background-task', function(){
             });
             
             it('should reject tasks over key threshold', function(done){
-                var i, totalMsgs = 5, isDone = false, fn;
-                bgTaskWorker.on('TASK_AVAILABLE', function(){
-                    bgTaskWorker.acceptTask(function(id, msg){
+                // Need to send three tasks and make sure the third is rejected
+                var t1, t2, t3;
+
+                t1 = function(){
+                    bgTask.addTask({kid: "kid1234", task: 1}, function(id, r){
+                        r.should.eql({kid: "kid1234", task: 1});
+                    });
+                };
+
+                t2 = function(){
+                    bgTask.addTask({kid: "kid1234", task: 2}, function(id, r){
+                        r.should.eql({kid: "kid1234", task: 2});
+                    });
+                };
+
+
+                t3 = function(){
+                    bgTask.addTask({kid: "kid1234", task: 3}, function(id, r){
+                        r.should.be.an.instanceOf(Error);
+                        r.message.should.equal("Too many tasks");
+                        done();
+                    });
+                };
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(d){
                         setTimeout(function(){
-                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
-                        }, 30);
+                            bgTaskWorker.completeTask(id, 'SUCCESS', d);
+                        }, 500);
                     });
                 });
 
-                fn = function(){
-                    bgTask.addTask({kid: "kid1234", body: "test"}, function(id, reply){
-                        if (!isDone && reply instanceof Error){
-                            isDone = true;
+                setTimeout(t1, 5);
+                setTimeout(t2, 10);
+                setTimeout(t3, 20);
+
+            });
+
+            it('should allow for multiple tasks to be added', function(done){
+                // Two tasks should be able to complete
+                var count = 2, f;
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(d){
+                        setTimeout(function(){
+                            bgTaskWorker.completeTask(id, 'SUCCESS', d);
+                        }, 100);
+                    });
+                });
+
+                f = function(){
+                    bgTask.addTask({kid: "kid1234"}, function(id, v){
+                        v.should.be.eql({kid: "kid1234"});
+                        count = count - 1;
+                        if (count === 0){
                             done();
                         }
                     });
                 };
 
-                for (i = 0; i < totalMsgs; i = i + 1){
-                    setTimeout(fn, i);
-                }
-
+                setTimeout(f, 5);
+                setTimeout(f, 10);
             });
 
-            it('should allow for multiple tasks to be added', function(done){
-              var bTask = background_task.connect({taskKey: "kid", maxTasksPerKey: 10})
-                , totalMsgs = 10, i
-                , count = 0
-                , makeCallback = function(total){
-                    return function(){
-                        var id = Date()
-                          , body = {kid: "kid1234", body: 'test_'+id};
-                        bTask.addTask(body, function(tid, reply){
-                            reply.should.eql({kid: "kid1234", body: 'test_'+id});
-                            count = count + 1;
-                            if (count >= total){
-                              done();
-                            }
-                        });
-                    };
-                };
-
-
-                bgTaskWorker.on('TASK_AVAILABLE', function(id){
-                    bgTaskWorker.acceptTask(id, function(msg){
-                        bgTaskWorker.completeTask(id, 'SUCCESS', msg);
-                    });
-                });
-
-
-                for (i = 0; i < totalMsgs; i = i + 1){
-                    setTimeout(makeCallback(totalMsgs), delay+i);
-                }
-
-            });
         });
+
         describe('#completeTask', function(){
             var msg = {kid: "kid1234", body: "test"};
             it('it should reject tasks without ids', function(){
