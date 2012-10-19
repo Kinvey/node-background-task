@@ -40,20 +40,20 @@ describe('messaging', function(){
         it('should be a worker when isWorker: true', function(done){
             var hashName = "testHash"
               , queueName = "testQueue"
-              , message = "{\"test\":\"message\"}"
-              , opts = {outputHash: hashName, queue: queueName, isResponder: true}
+              , message = '{"test":"message", "_messageId": "0xdeadbeef", "_listenChannel":"dummy"}'
+              , opts = {outputHash: hashName, dataHash: queueName, isResponder: true}
               , rcPubSub = redis.createClient()
               , rcData = redis.createClient()
               , mBus = messaging.connect(opts)
               , cback = function(){
-                  rcData.rpush(queueName, message);
+                  rcData.hset(queueName, "0xdeadbeef", message);
                   rcPubSub.publish("msgChannels:broadcast", "0xdeadbeef");
               };
 
-            mBus.on('data_available', function(){
-                mBus.acceptMessage(function(id, msg){
+            mBus.on('data_available', function(id){
+                mBus.acceptMessage(id, function(msg){
                     mBus.shutdown();
-                    JSON.stringify(msg).should.eql(message);
+                    msg.test.should.eql(JSON.parse(message).test);
                     done();
                 });
             });
@@ -185,8 +185,8 @@ describe('messaging', function(){
             it('should not allow more tasks to complete', function(done){
                 var cback1, cback2;
 
-                mBusWorker.on('data_available', function(){
-                    mBusWorker.acceptMessage(function(id, msg){
+                mBusWorker.on('data_available', function(id){
+                    mBusWorker.acceptMessage(id, function(msg){
                         mBusWorker.sendResponse(id, 'SUCCESS', msg);
                     });
                 });
@@ -217,8 +217,8 @@ describe('messaging', function(){
         describe('#sendMessage', function(){
             it('should call callback', function(done){
                 var cback;
-                mBusWorker.on('data_available', function(){
-                    mBusWorker.acceptMessage(function(id, msg){
+                mBusWorker.on('data_available', function(id){
+                    mBusWorker.acceptMessage(id, function(msg){
                         mBusWorker.sendResponse(id, 'SUCCESS', msg);
                     });
                 });
@@ -252,8 +252,8 @@ describe('messaging', function(){
                   };
 
 
-                mBusWorker.on('data_available', function(){
-                    mBusWorker.acceptMessage(function(id, msg){
+                mBusWorker.on('data_available', function(id){
+                    mBusWorker.acceptMessage(id, function(msg){
                         mBusWorker.sendResponse(id, 'SUCCESS', msg);
                     });
                 });

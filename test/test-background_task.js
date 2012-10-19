@@ -38,8 +38,8 @@ describe('node-background-task', function(){
 
             it('should emit TASK_DONE when a task completes', function(done){
                 var cb, tid;
-                bgTaskWorker.on('TASK_AVAILABLE', function(){
-                    bgTaskWorker.acceptTask(function(id, msg){
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(msg){
                         tid = id;
                         bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                     });
@@ -60,8 +60,8 @@ describe('node-background-task', function(){
 
             it('should emit TASK_AVAILABLE when a task is added', function(done){
                 var cb;
-                bgTaskWorker.on('TASK_AVAILABLE',  function(){
-                    bgTaskWorker.acceptTask(function(id, msg){
+                bgTaskWorker.on('TASK_AVAILABLE',  function(id){
+                    bgTaskWorker.acceptTask(id, function(msg){
                         bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                         done();
                     });
@@ -77,8 +77,8 @@ describe('node-background-task', function(){
             it('should emit TASK_ERROR if something goes wrong');
             // it('should emit TASK_ERROR if something goes wrong', function(done){
             //     var i;
-            //     bgTaskWorker.on('TASK_AVAILABLE', function(){
-            //         bgTaskWorker.acceptTask(function(id, msg){
+            //     bgTaskWorker.on('TASK_AVAILABLE', function(id){
+            //         bgTaskWorker.acceptTask(id, function(msg){
             //             bgTaskWorker.completeTask(id, 'SUCCESS', msg);
             //         });
             //     });
@@ -86,15 +86,15 @@ describe('node-background-task', function(){
             //     bgTaskWorker.on('TASK_ERROR', done);
 
             //     for (i = 0; i < 10; i = i + 1){
-            //             bgTask.addTask({kid: "kid123", body: "hi"}, function(id, reply){console.log(reply)});
+            //             bgTask.addTask({kid: "kid123", body: "hi"}, function(id, reply){console.log(reply);});
             //     }
 
             // });
             it('should handle an error', function(done){
                 var mm = 'I can haz cheezburger'
                   , dm = 'I like turtles';
-                bgTaskWorker.on('TASK_AVAILABLE', function(){
-                    bgTaskWorker.acceptTask(function(id, msg){
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(msg){
                         var err = new Error(mm);
                         err.debugMessage = dm;
                         bgTaskWorker.completeTask(id, 'FAILED', err);
@@ -113,8 +113,8 @@ describe('node-background-task', function(){
             it('should emit both TASK_ERROR and TASK_DONE if there was an error');
             it('should have the task when TASK_AVAILABLE is emitted', function(done){
                 var cb;
-                bgTaskWorker.on('TASK_AVAILABLE', function(){
-                    bgTaskWorker.acceptTask(function(id, msg){
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(msg){
                         should.exist(id);
                         msg.should.eql({kid: "kid1234", body: "test"});
                         done();
@@ -163,8 +163,8 @@ describe('node-background-task', function(){
         });
         it('should be a worker when isWorker: true', function(done){
             var cb;
-            bgTaskWorker.on('TASK_AVAILABLE', function(){
-                bgTaskWorker.acceptTask(function(id, msg){
+            bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                bgTaskWorker.acceptTask(id, function(msg){
                     bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                     done();
                 });
@@ -188,8 +188,8 @@ describe('node-background-task', function(){
         describe('#addTask', function(){
             it('should call callback', function(done){
                 var cb;
-                bgTaskWorker.on('TASK_AVAILABLE', function(){
-                    bgTaskWorker.acceptTask(function(id, msg){
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(msg){
                         bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                     });
                 });
@@ -206,8 +206,8 @@ describe('node-background-task', function(){
 
             it('should timeout if timeout value exceeded', function(done){
                var cb, task = background_task.connect({taskKey: "kid", timeout: 200});
-                bgTaskWorker.on('TASK_AVAILABLE', function(){
-                    bgTaskWorker.acceptTask(function(id, msg){
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(msg){
                         setTimeout(function(){
                             bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                         }, delay*10);
@@ -229,8 +229,8 @@ describe('node-background-task', function(){
             it('should not call callback twice if timeout value exceeded', function(done){
                 // TODO: Make this better
                 var cb, task = background_task.connect({taskKey: "kid", timeout: delay});
-                bgTaskWorker.on('TASK_AVAILABLE', function(){
-                    bgTaskWorker.acceptTask(function(id, msg){
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(msg){
                         setTimeout(function(){
                             bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                         }, delay+1);
@@ -269,8 +269,8 @@ describe('node-background-task', function(){
                 };
 
 
-                bgTaskWorker.on('TASK_AVAILABLE', function(){
-                    bgTaskWorker.acceptTask(function(id, msg){
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(msg){
                         bgTaskWorker.completeTask(id, 'SUCCESS', msg);
                     });
                 });
