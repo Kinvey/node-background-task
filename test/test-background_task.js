@@ -251,7 +251,7 @@ describe('node-background-task', function(){
             });
             
             it('should reject tasks over key threshold', function(done){
-                var i, totalMsgs = 10, isDone = false, fn;
+                var i, totalMsgs = 5, isDone = false, fn;
                 bgTaskWorker.on('TASK_AVAILABLE', function(){
                     bgTaskWorker.acceptTask(function(id, msg){
                         setTimeout(function(){
@@ -270,7 +270,7 @@ describe('node-background-task', function(){
                 };
 
                 for (i = 0; i < totalMsgs; i = i + 1){
-                    setTimeout(fn, delay+i);
+                    setTimeout(fn, i);
                 }
 
             });
@@ -287,7 +287,7 @@ describe('node-background-task', function(){
                             reply.should.eql({kid: "kid1234", body: 'test_'+id});
                             count = count + 1;
                             if (count >= total){
-                                setTimeout(function(){bTask.end(); done();}, 100);
+                              done();
                             }
                         });
                     };
