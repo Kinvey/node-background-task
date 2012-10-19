@@ -13,7 +13,7 @@ describe('node-background-task', function(){
     beforeEach(function(done){
         rc = redis.createClient();
         rc.flushall();
-        bgTask = background_task.connect({taskKey: "kid"});
+        bgTask = background_task.connect({taskKey: "kid", maxTasksPerKey: 2});
         bgTaskWorker = background_task.connect({isWorker: true});
         done();
     });
@@ -250,19 +250,44 @@ describe('node-background-task', function(){
                 setTimeout(cb, delay);
             });
             
-            it('should reject tasks over key threshold');
+            it('should reject tasks over key threshold', function(done){
+                var i, totalMsgs = 5, isDone = false, fn;
+                bgTaskWorker.on('TASK_AVAILABLE', function(){
+                    bgTaskWorker.acceptTask(function(id, msg){
+                        setTimeout(function(){
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        }, 30);
+                    });
+                });
+
+                fn = function(){
+                    bgTask.addTask({kid: "kid1234", body: "test"}, function(id, reply){
+                        if (!isDone && reply instanceof Error){
+                            isDone = true;
+                            done();
+                        }
+                    });
+                };
+
+                for (i = 0; i < totalMsgs; i = i + 1){
+                    setTimeout(fn, i);
+                }
+
+            });
+
             it('should allow for multiple tasks to be added', function(done){
-              var totalMsgs = 10, i
+              var bTask = background_task.connect({taskKey: "kid", maxTasksPerKey: 10})
+                , totalMsgs = 10, i
                 , count = 0
                 , makeCallback = function(total){
                     return function(){
                         var id = Date()
                           , body = {kid: "kid1234", body: 'test_'+id};
-                        bgTask.addTask(body, function(tid, reply){
+                        bTask.addTask(body, function(tid, reply){
                             reply.should.eql({kid: "kid1234", body: 'test_'+id});
                             count = count + 1;
                             if (count >= total){
-                                done();
+                              done();
                             }
                         });
                     };
@@ -277,7 +302,7 @@ describe('node-background-task', function(){
 
 
                 for (i = 0; i < totalMsgs; i = i + 1){
-                    setTimeout(makeCallback(totalMsgs), delay);
+                    setTimeout(makeCallback(totalMsgs), delay+i);
                 }
 
             });
