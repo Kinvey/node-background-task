@@ -1,3 +1,4 @@
+--bail
 --require should
 --reporter spec
 --growl

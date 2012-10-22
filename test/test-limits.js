@@ -24,11 +24,6 @@ describe('Test Limits', function(){
         done();
     });
 
-    afterEach(function(done){
-        rc.flushall();
-        done();
-    });
-
     describe('Error Handling', function(){
         it('should not create an object without a task key', function(){
             (function(){

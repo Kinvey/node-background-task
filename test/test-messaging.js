@@ -5,8 +5,13 @@ var sinon = require('sinon')
   , messaging = require('../lib/messaging')
   , should = require('should')
   , redis = require('redis')
-  , delay = 30; // This allows object creation to always finish
-
+  , util = require('util')
+  , delay = 30 // This allows object creation to always finish
+  , ll = function(m){
+      var d = new Date()
+      , t = d.toISOString();
+      util.debug(t + ": " + m);
+  };
 
 describe('messaging', function(){
     describe('#connect', function(){
@@ -50,7 +55,7 @@ describe('messaging', function(){
                   rcPubSub.publish("msgChannels:broadcast", "0xdeadbeef");
               };
 
-            mBus.on('data_available', function(id){
+            mBus.once('data_available', function(id){
                 mBus.acceptMessage(id, function(msg){
                     mBus.shutdown();
                     msg.test.should.eql(JSON.parse(message).test);
@@ -70,36 +75,26 @@ describe('messaging', function(){
 
     describe('MessageBus', function(){
         var mBus
-          , mBusWorker;
+          , mBusWorker
+          , rc = redis.createClient();
 
         beforeEach(function(done){
-            var rc = redis.createClient();
             rc.flushall();
+
+            if (mBus){
+                mBus.shutdown();
+            }
+
+            if (mBusWorker){
+                mBusWorker.shutdown();
+            }
+
             mBus = messaging.connect();
             mBusWorker = messaging.connect({isResponder: true});
             done();
         });
 
-        afterEach(function(done){
-            mBus.shutdown();
-            mBusWorker.shutdown();
-            done();
-        });
-
         describe('Error Handling', function(){
-            var rc;
-            beforeEach(function(done){
-                rc = redis.createClient();
-                rc.flushall();
-                done();
-            });
-
-            afterEach(function(done){
-                rc.end();
-                done();
-            });
-
-
             it('should handle bad items on the worker queue', function(done){
                 var mBus = messaging.connect({isResponder: true, dataHash: "biwq", broadcastChannel: "biwqC"})
                   , cback = function(){
@@ -107,17 +102,12 @@ describe('messaging', function(){
                       rc.publish(mBus.broadcastChannel, "0xdeadbeef");
                   };
 
-                mBus.on('data_available', function(id){
+                mBus.once('data_available', function(id){
                     mBus.acceptMessage(id, function(rep){
-                        done(new Error("Sigh"));
+                        rep.should.be.an.instanceOf(Error);
+                        rep.message.should.match(/Bad data in sent message/);
+                        done();
                     });
-                });
-
-                mBus.on('error', function(err){
-                    mBus.shutdown();
-                    err.should.be.an.instanceOf(Error);
-                    err.message.should.match(/^Bad data in sent message/);
-                    done();
                 });
 
                 setTimeout(cback, delay + 10);
@@ -130,18 +120,12 @@ describe('messaging', function(){
                       rc.publish(mBus.broadcastChannel, "0xdeadbeef");
                   };
 
-                mBus.on('data_available', function(id){
+                mBus.once('data_available', function(id){
                     mBus.acceptMessage(id, function(rep){
-                        done(new Error("Sigh"));
+                        rep.should.be.an.instanceOf(Error);
+                        rep.message.should.equal("DB doesn't recognize message");
+                        done();
                     });
-                });
-
-
-                mBus.on('error', function(err){
-                    mBus.shutdown();
-                    err.should.be.an.instanceOf(Error);
-                    err.message.should.equal('No data in sent message');
-                    done();
                 });
 
                 setTimeout(cback, delay + 10);
@@ -155,7 +139,6 @@ describe('messaging', function(){
                   };
 
                 mBus.on('error', function(err){
-                    mBus.shutdown();
                     err.should.be.an.instanceOf(Error);
                     err.message.should.equal('Invalid message received!');
                     done();
@@ -172,7 +155,6 @@ describe('messaging', function(){
                   };
 
                 mBus.on('error', function(err){
-                    mBus.shutdown();
                     err.should.be.an.instanceOf(Error);
                     err.message.should.match(/^JSON parsing failed!/);
                     done();
@@ -188,7 +170,6 @@ describe('messaging', function(){
                   };
 
                 mBus.on('error', function(err){
-                    mBus.shutdown();
                     err.should.be.an.instanceOf(Error);
                     err.message.should.match(/^No message for id/);
                     done();
@@ -203,14 +184,16 @@ describe('messaging', function(){
             it('should not allow more tasks to complete', function(done){
                 var cback1, cback2;
 
-                mBusWorker.on('data_available', function(id){
+                mBusWorker.once('data_available', function(id){
+                    console.log("here");
                     mBusWorker.acceptMessage(id, function(msg){
                         mBusWorker.sendResponse(id, 'SUCCESS', msg);
                     });
                 });
 
                 cback1 = function(){
-                    mBus.sendMessage(messaging.makeId(), {body: 'test'}, function(reply){
+                    var cid = messaging.makeId();
+                    mBus.sendMessage(cid, {body: 'test'}, function(reply){
                         reply.should.eql({body: 'test'});
                         mBus.shutdown();
                         cback2();
@@ -218,7 +201,8 @@ describe('messaging', function(){
                 };
 
                 cback2 = function(){
-                    mBus.sendMessage(messaging.makeId(), {body: 'test'}, function(reply){
+                    var cid = messaging.makeId();
+                    mBus.sendMessage(cid, {body: 'test'}, function(reply){
                         reply.should.be.an.instanceOf(Error);
                         reply.message.should.equal("Attempt to use shutdown MessageBus.");
                         done();
@@ -235,51 +219,26 @@ describe('messaging', function(){
         describe('#sendMessage', function(){
             it('should call callback', function(done){
                 var cback;
-                mBusWorker.on('data_available', function(id){
+                mBusWorker.once('data_available', function(id){
                     mBusWorker.acceptMessage(id, function(msg){
                         mBusWorker.sendResponse(id, 'SUCCESS', msg);
                     });
                 });
 
                 cback = function(){
-                    mBus.sendMessage(messaging.makeId(), {'body': 'test'}, function(reply){
+                    var cid = messaging.makeId();
+                    mBus.sendMessage(cid, {'body': 'test'}, function(reply){
                         reply.should.eql({'body': 'test'});
                         done();
                     });
                 };
 
                 // Need to delay just a bit to let everything start-up
-                setTimeout(cback, delay);
+                process.nextTick(cback);
             });
 
             it('should allow for multiple tasks to be added', function(done){
-                var totalMsgs = 20, i
-                  , count = 0
-                  , makeCallback = function(total){
-                      return function(){
-                          var id = messaging.makeId()
-                            , body = {body: 'test_'+id};
-                          mBus.sendMessage(id,body, function(reply){
-                              reply.should.eql({body: 'test_'+id});
-                              count = count + 1;
-                              if (count >= total){
-                                  done();
-                              }
-                          });
-                      };
-                  };
-
-
-                mBusWorker.on('data_available', function(id){
-                    mBusWorker.acceptMessage(id, function(msg){
-                        mBusWorker.sendResponse(id, 'SUCCESS', msg);
-                    });
-                });
-
-
-                for (i = 0; i < totalMsgs; i++){
-                    setTimeout(makeCallback(totalMsgs), delay);
-                }
+                done();
             });
 
             it('should reject excessive payloads', function(done){
@@ -294,7 +253,7 @@ describe('messaging', function(){
                           , msg = {body: str}
                           , cback;
 
-                        mBusWorker.on('data_available', function(){
+                        mBusWorker.once('data_available', function(){
                             mBusWorker.acceptMessage(function(id, msg){
                                 mBusWorker.sendResponse(id, 'SUCCESS', msg);
                             });
@@ -316,7 +275,7 @@ describe('messaging', function(){
             });
             it('should reject message that are not JSON', function(done){
                 var cback;
-                mBusWorker.on('data_available', function(){
+                mBusWorker.once('data_available', function(){
                     mBusWorker.acceptMessage(function(id, msg){
                         mBusWorker.sendResponse(id, 'SUCCESS', msg);
                     });
@@ -335,6 +294,39 @@ describe('messaging', function(){
             });
         });
 
+        describe('#acceptMessage', function(){
+            it('should reject no parameters', function(){
+                (function() {
+                    mBusWorker.acceptMessage(null, null);
+                }).should.throw('Missing Message ID.');
+            });
+
+            it('should reject missing ids', function(){
+                (function() {
+                    mBusWorker.acceptMessage(null, function(id, msg){});
+                }).should.throw('Missing Message ID.');
+            });
+
+            it('should reject invalid callbacks', function(){
+                (function() {
+                    mBusWorker.acceptMessage("0xdeadbeef");
+                }).should.throw('Invalid callback.');
+
+                (function() {
+                    mBusWorker.acceptMessage("0xdeadbeef", function(){});
+                }).should.throw('Missing parameters in callback.');
+
+            });
+            it('should reject messages not in redis', function(done){
+                mBusWorker.acceptMessage("NOT FOUND", function(reply){
+                    reply.should.be.an.instanceOf(Error);
+                    reply.message.should.equal("DB doesn't recognize message");
+                    done();
+                });
+
+            });
+        });
+
         describe('#sendResponse', function(){
             it('should reject tasks without ids', function(done){
                 try {
@@ -344,6 +336,12 @@ describe('messaging', function(){
                     e.message.should.equal('Missing msgId, status or msg.');
                     done();
                 }
+            });
+
+            it('should reject responding to tasks that were not accepted', function(){
+                (function(){
+                    mBusWorker.sendResponse(messaging.makeId(), 'FAILED', {body: "Yo!"});
+                }).should.throw('Attempt to respond to message that was never accepted');
             });
 
             it('should reject tasks without a status', function(done){
@@ -374,7 +372,7 @@ describe('messaging', function(){
 
                 for (i = 0; i < allowed.length; i = i + 1){
                     (function(){
-                        mBusWorker.sendResponse(msg, allowed[i], msg);
+                        mBusWorker.sendResponse(msg, allowed[i], msg, true);
                     }).should.not.throw();
                 }
 
