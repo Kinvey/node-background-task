@@ -49,8 +49,8 @@ describe('node-background-task', function(){
     describe('Events', function(){
         describe('#emit()', function(){
             it('should invoke the callback', function(){
-                var spy = sinon.spy()
-                , bgTask = background_task.connect({});
+                var spy = sinon.spy();
+
 
                 bgTask.on('foo', spy);
                 bgTask.emit('foo');
@@ -257,6 +257,7 @@ describe('node-background-task', function(){
                         } else {
                             setTimeout(function(){
                                 bgTaskWorker.completeTask(id, 'SUCCESS', r);
+                                task.end();
                                 done();
                             }, delay+1);
                         }
@@ -390,6 +391,7 @@ describe('node-background-task', function(){
                 cb = function(){
                     bgTask.addTask({kid: "only called once", body: "test"}, function(id, reply){
                         count.should.equal(1);
+                        btw.end();
                         done();
                     });
 

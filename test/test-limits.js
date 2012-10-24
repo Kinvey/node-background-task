@@ -24,6 +24,14 @@ describe('Test Limits', function(){
         done();
     });
 
+    describe('redis', function(){
+        it('should verify that authentication works', function(done){
+            var limit = new limits.TaskLimit({taskKey: "auth",  password: "invalid", maxTasksPerKey: 5});
+            limit.on('error', function(){done();});
+
+        });
+    });
+
     describe('Error Handling', function(){
         it('should not create an object without a task key', function(){
             (function(){

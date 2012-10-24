@@ -185,7 +185,6 @@ describe('messaging', function(){
                 var cback1, cback2;
 
                 mBusWorker.once('data_available', function(id){
-                    console.log("here");
                     mBusWorker.acceptMessage(id, function(msg){
                         mBusWorker.sendResponse(id, 'SUCCESS', msg);
                     });
