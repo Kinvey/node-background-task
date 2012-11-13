@@ -29,8 +29,7 @@
   ],
   "dependencies": {
     "node-uuid": "*",
-    "hiredis": "*",
-    "redis": "*"
+    "redis": ">=0.8.2"
   },
   "devDependencies": {
     "should": "*",
