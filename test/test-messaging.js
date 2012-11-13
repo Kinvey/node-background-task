@@ -1,4 +1,19 @@
 /*global describe, it, beforeEach, afterEach */
+
+// Copyright 2012 Kinvey, Inc
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+
 "use strict";
 
 var sinon = require('sinon')
@@ -7,6 +22,7 @@ var sinon = require('sinon')
   , redis = require('redis')
   , util = require('util')
   , delay = 30 // This allows object creation to always finish
+  , testUtils = require('./test-utils')
   , ll = function(m){
       var d = new Date()
       , t = d.toISOString();
@@ -241,37 +257,34 @@ describe('messaging', function(){
             });
 
             it('should reject excessive payloads', function(done){
-                var fs = require('fs')
-                , sz = 1024 * 1024 * 2
-                , buf = new Buffer(sz);
+                var test
+                  , twoMegs = 2 * 1024 * 1024;
 
+                test = function(str){
+                    var msg = {body: str}
+                      , cback;
 
-                fs.open('/dev/urandom', 'r', '0666', function(err, fd){
-                    fs.read(fd, buf, 0, sz, 0, function(err, bytesRead, buf){
-                        var str = buf.toString('base64')
-                          , msg = {body: str}
-                          , cback;
-
-                        mBusWorker.once('data_available', function(){
-                            mBusWorker.acceptMessage(function(id, msg){
-                                mBusWorker.sendResponse(id, 'SUCCESS', msg);
-                            });
+                    mBusWorker.once('data_available', function(){
+                        mBusWorker.acceptMessage(function(id, msg){
+                            mBusWorker.sendResponse(id, 'SUCCESS', msg);
                         });
-
-                        cback = function(){
-                            mBus.sendMessage(messaging.makeId(), msg, function(reply){
-                                reply.should.be.instanceOf(Error);
-                                reply.message.should.equal('Payload too large!');
-                                done();
-                            });
-                        };
-
-                        // Need to delay just a bit to let everything start-up
-                        setTimeout(cback, delay);
-
                     });
-                });
+
+                    cback = function(){
+                        mBus.sendMessage(messaging.makeId(), msg, function(reply){
+                            reply.should.be.instanceOf(Error);
+                            reply.message.should.equal('Payload too large!');
+                            done();
+                        });
+                    };
+
+                    // Need to delay just a bit to let everything start-up
+                    setTimeout(cback, delay);
+                };
+
+                testUtils.testWithFile(twoMegs, test);
             });
+
             it('should reject message that are not JSON', function(done){
                 var cback;
                 mBusWorker.once('data_available', function(){
