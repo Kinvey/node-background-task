@@ -21,8 +21,10 @@ var sinon = require('sinon')
   , background_task = require('../lib/background_task')
   , should = require('should')
   , redis = require('redis')
+  , async = require('async')
   , delay = 30 // This allows object creation to always finish
   , testUtils = require('./test-utils')
+  , blacklist = require('../lib/blacklist') // Needed for timeouts and keys
   , ll = function(m){
       var d = new Date()
       , t = d.toISOString();
@@ -223,7 +225,7 @@ describe('node-background-task', function(){
                 t.end();
                 t.addTask({hi: "test"}, function(id, v){
                     v.should.be.an.instanceOf(Error);
-                    v.message.should.equal('Attempt to use shutdown MessageBus.');
+                    v.message.should.equal('Attempt to use invalid BackgroundTask');
                     done();
                 });
             });
@@ -348,6 +350,25 @@ describe('node-background-task', function(){
                 process.nextTick(f);
             });
 
+            it('should not add a task with a blacklisted taskkey', function(done){
+                var key = "kid_aaaa";
+                var task = {taskKey: key};
+                var bl = new blacklist.Blacklist(task);
+                var count = bl.blacklistThreshold + 1;
+                async.timesSeries(count, function(n, next){
+                    bl.addFailure(key, "Testing failure", function(reason){
+                        process.nextTick(next);
+                    });
+                }, function(err, _) {
+                    bgTask.addTask({kid: key}, function(id, v){
+                        v.should.be.an.instanceOf(Error);
+                        v.message.should.eql("Blacklisted: Testing failure");
+                        
+                        done();
+                    });
+                });
+
+            });
         });
 
         describe('#acceptTask', function(){
@@ -459,32 +480,89 @@ describe('node-background-task', function(){
             });
         });
 
-      describe('General functionality', function(){
-        it('Should send larger (> 65k files)', function(done){
-            var test
-              , fiveHundredAndTwelveK = 512 * 1024;
+        describe('#reportBadTask', function(){
+            // NB: Non-integration tests should be handled by test-blacklist.js
+            it('should be able to blacklist a task', function(done){
+                var key = "kid_blacklist";
+                var task = {taskKey: key};
+                var bl = new blacklist.Blacklist(task);
+                var count = bl.blacklistThreshold + 1;
+                async.timesSeries(count, function(n, next){
+                    bl.addFailure(key, "Testing failure", function(reason){
+                        process.nextTick(next);
+                    });
+                }, function(err, _) {
+                    bgTask.addTask({kid: key}, function(id, v){
+                        v.should.be.an.instanceOf(Error);
+                        v.message.should.eql("Blacklisted: Testing failure");
 
+                        done();
+                    });
+                });
+            });
 
-            test = function(str){
-                var cb;
+            it('should reset after a time interval', function(done){
+                var key = "kid_reset";
+                var task = {taskKey: key};
+                var bl = new blacklist.Blacklist(task);
+                var count = bl.blacklistThreshold;
+
                 bgTaskWorker.on('TASK_AVAILABLE', function(id){
-                    bgTaskWorker.acceptTask(id, function(msg){
-                        bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                    bgTaskWorker.acceptTask(id, function(d){
+                        bgTaskWorker.completeTask(id, 'SUCCESS', d);
                     });
                 });
 
-                cb = function(){
-                    bgTask.addTask({kid: "should handle 512k", body: str}, function(id, reply){
-                        reply.body.should.eql(str);
-                        done();
+                async.timesSeries(count, function(n, next){
+                    bl.addFailure(key, "Testing failure", function(reason){
+                        process.nextTick(next);
                     });
+                }, function(err, _) {
+                    setTimeout(function(){
+                        async.timesSeries(count, function(n, next){
+                            bl.addFailure(key, "Testing failure", function(reason){
+                                process.nextTick(next);
+                            });
+                        }, function(err, _){
+                            bgTask.addTask({kid: key}, function(id, v){
+                                v.should.not.be.an.instanceOf(Error);
+                                v.should.be.eql({kid: "kid_reset"});
+                                done();
+                            });
+
+                        });
+                    }, 1000);
+                });
+
+            });
+        });
+
+        describe('General functionality', function(){
+            it('Should send larger (> 65k files)', function(done){
+                var test
+                  , fiveHundredAndTwelveK = 512 * 1024;
+
+
+                test = function(str){
+                    var cb;
+                    bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                        bgTaskWorker.acceptTask(id, function(msg){
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        });
+                    });
+
+                    cb = function(){
+                        bgTask.addTask({kid: "should handle 512k", body: str}, function(id, reply){
+                            reply.body.should.eql(str);
+                            done();
+                        });
+                    };
+
+                    setTimeout(cb, delay);
                 };
 
-                setTimeout(cb, delay);
-            };
-
-            testUtils.testWithFile(fiveHundredAndTwelveK, test);
+                testUtils.testWithFile(fiveHundredAndTwelveK, test);
+            });
         });
-      });
     });
 });
