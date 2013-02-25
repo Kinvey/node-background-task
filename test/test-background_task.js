@@ -362,7 +362,8 @@ describe('node-background-task', function(){
                 }, function(err, _) {
                     bgTask.addTask({kid: key}, function(id, v){
                         v.should.be.an.instanceOf(Error);
-                        v.message.should.eql("Blacklisted: Testing failure");
+                        v.message.should.eql("Blacklisted");
+                        v.debugMessage.should.eql("Blocked, reason: Testing failure, remaining time: 3600");
                         
                         done();
                     });
@@ -494,8 +495,8 @@ describe('node-background-task', function(){
                 }, function(err, _) {
                     bgTask.addTask({kid: key}, function(id, v){
                         v.should.be.an.instanceOf(Error);
-                        v.message.should.eql("Blacklisted: Testing failure");
-
+                        v.message.should.eql("Blacklisted");
+                        v.debugMessage.should.eql("Blocked, reason: Testing failure, remaining time: 3600");
                         done();
                     });
                 });
