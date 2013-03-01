@@ -213,7 +213,113 @@ describe('Blacklist', function(){
                         });
                     });
                 }, b.failureInterval * 1000);
-            })
+            });
+        });
+    });
+    describe("Logging", function(){
+        it('should not log when logging is false', function(done){
+            var b = new bl.Blacklist({
+                taskKey: "kid",
+                failureInterval: 10,
+                blacklistThreshold: 1
+            });
+
+            var taskKey = "log_false";
+            var reason = "Testing lifting";
+
+            b.addFailure(taskKey, reason, function(s1){
+                s1.should.eql("OK");
+                b.addFailure(taskKey, reason, function(s2){
+                    s2.should.eql("Blacklisted");
+                    rc.llen(b.blacklistLogKeyPrefix + taskKey, function(e, r){
+                        r.should.be.eql(0);
+                        done();
+                    });
+                });
+            });
+
+        });
+        it('should log when logging is true', function(done){
+            var b = new bl.Blacklist({
+                taskKey: "kid",
+                failureInterval: 10,
+                blacklistThreshold: 1,
+                logBlacklist: true
+            });
+
+            var taskKey = "log_true";
+            var reason = "Testing lifting";
+
+            b.addFailure(taskKey, reason, function(s1){
+                s1.should.eql("OK");
+                b.addFailure(taskKey, reason, function(s2){
+                    s2.should.eql("Blacklisted");
+                    rc.llen(b.blacklistLogKeyPrefix + taskKey, function(e, r){
+                        r.should.eql(1);
+                        done();
+                    });
+                });
+            });
+        });
+        it('should log multiple blacklists', function(done){
+            var b = new bl.Blacklist({
+                taskKey: "kid",
+                failureInterval: 10,
+                blacklistThreshold: 1,
+                logBlacklist: true
+            });
+
+            var taskKey = "log_multiple";
+            var reason = "Testing lifting";
+
+            b.addFailure(taskKey, reason, function(s1){
+                s1.should.eql("OK");
+                b.addFailure(taskKey, reason, function(s2){
+                    s2.should.eql("Blacklisted");
+                    rc.del(b.globalBlacklistKeyPrefix + taskKey, function(e, r){
+                        b.addFailure(taskKey, reason, function(s3){
+                            s3.should.eql("Blacklisted");
+                            rc.llen(b.blacklistLogKeyPrefix + taskKey, function(e, r){
+                                r.should.eql(2);
+                                done();
+                            });
+                        });
+                    });
+                });
+            });
+        });
+
+        it('should log different task keys in different logs', function(done){
+            var b = new bl.Blacklist({
+                taskKey: "kid",
+                failureInterval: 10,
+                blacklistThreshold: 1,
+                logBlacklist: true
+            });
+
+            var taskKey1 = "log_alpha";
+            var taskKey2 = "log_beta";
+            var reason = "Testing lifting";
+
+            b.addFailure(taskKey1, reason, function(a1){
+                a1.should.eql("OK");
+                b.addFailure(taskKey1, reason, function(a2){
+                    a2.should.eql("Blacklisted");
+                    b.addFailure(taskKey2, reason, function(b1){
+                        b1.should.eql("OK");
+                        b.addFailure(taskKey2, reason, function(b2){
+                            b2.should.eql("Blacklisted");
+                            rc.llen(b.blacklistLogKeyPrefix + taskKey1, function(e, r){
+                                r.should.eql(1);
+                                rc.llen(b.blacklistLogKeyPrefix + taskKey2, function(e, r){
+                                    r.should.eql(1);
+                                    done();
+                                });
+                            });
+                        });
+                    });
+                });
+            });
         });
     });
 });
