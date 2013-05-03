@@ -300,13 +300,13 @@ describe('node-background-task', function(){
 
                 t1 = function(){
                     bgTask.addTask({kid: "keyT", task: 1}, function(id, r){
-                        r.should.eql({kid: "keyT", task: 1});
+
                     });
                 };
 
                 t2 = function(){
                     bgTask.addTask({kid: "keyT", task: 2}, function(id, r){
-                        r.should.eql({kid: "keyT", task: 2});
+
                     });
                 };
 

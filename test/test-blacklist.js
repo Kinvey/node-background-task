@@ -189,7 +189,7 @@ describe('Blacklist', function(){
                                 b.should.be.false;
                                 done();
                             });
-                        }, b.globalBlacklistTimeout*1000);
+                        }, b.globalBlacklistTimeout*1500);
                     });
                 });
             });
@@ -212,7 +212,7 @@ describe('Blacklist', function(){
                             done();
                         });
                     });
-                }, b.failureInterval * 1000);
+                }, b.failureInterval * 1500);
             });
         });
     });
