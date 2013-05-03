@@ -5,7 +5,7 @@ var sinon = require('sinon')
   , limits = require('../lib/task_limit')
   , should = require('should')
   , redis = require('redis')
-  , delay = 30; // This allows object creation to always finish
+  , delay = 100; // This allows object creation to always finish
 
 
 describe('Test Limits', function(){
@@ -172,4 +172,61 @@ describe('Test Limits', function(){
         });
 
     });
-});
+
+    describe('#cleanupTasks', function(){
+      it('should clean up key all entries', function(done){
+        var key = taskLimit.redisKeyPrefix+task.a;
+        taskLimit.startTask(task);
+        taskLimit.startTask(task);
+        taskLimit.startTask(task);
+        taskLimit.startTask(task);
+        taskLimit.startTask(task);
+
+        setTimeout(function(){
+          taskLimit.cleanupTasks(function() {
+            rc.llen(key, function(err, len){
+              len.should.equal(0);
+              done();
+            });
+          });
+        }, delay);
+      });
+      it('should clean up only key entries with hostname', function(done){
+        var key = taskLimit.redisKeyPrefix+task.a;
+        taskLimit.startTask(task, function(x) {
+          taskLimit.startTask(task, function (x) {
+            taskLimit.startTask(task, function(x) {
+              rc.lpush(key, "{\"host\": \"abcd\", \"date\":\"" + Date() + "\"}", function(y) {
+                rc.lpush(key, "{\"host\": \"abcd\", \"date\":\"" + Date() + "\"}", function(y) {
+                  taskLimit.cleanupTasks(function(x) {
+                    rc.llen(key, function(err, len){
+                      len.should.equal(2);
+                      done();
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+      it('should not clean up any values', function(done){
+        var key = taskLimit.redisKeyPrefix+task.a;
+        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
+        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
+        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
+        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
+        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
+
+        setTimeout(function(){
+          taskLimit.cleanupTasks(function() {
+            rc.llen(key, function(err, len){
+              len.should.equal(5);
+              done();
+            });
+          });
+        }, delay);
+      });
+    });
+  });
+
