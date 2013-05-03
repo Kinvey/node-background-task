@@ -175,7 +175,7 @@ describe('Test Limits', function(){
     });
 
     describe('#cleanupTasks', function(){
-      it('should clean up key all entries', function(done){
+      it('should clean up key all tasks created by the current host', function(done){
         var key = taskLimit.redisKeyPrefix+task.a;
         async.times(5, function(n, next){
           taskLimit.startTask(task, function(){
@@ -192,7 +192,7 @@ describe('Test Limits', function(){
           }, delay);
         });
       });
-      it('should clean up only key entries with hostname', function(done){
+      it('should clean up all tasks created by the current host only', function(done){
         var key = taskLimit.redisKeyPrefix+task.a;
         async.times(3, function(n, next){
           taskLimit.startTask(task, function() {
@@ -210,7 +210,7 @@ describe('Test Limits', function(){
             });
           });
       });
-      it('should not clean up any values', function(done){
+      it('should not clean up any tasks', function(done){
         var key = taskLimit.redisKeyPrefix+task.a;
         var value = JSON.stringify({host: "abcd", date: Date()});
         rc.lpush(key, value, value, value, value, value);
