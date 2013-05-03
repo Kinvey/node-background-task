@@ -5,6 +5,7 @@ var sinon = require('sinon')
   , limits = require('../lib/task_limit')
   , should = require('should')
   , redis = require('redis')
+  , async = require('async')
   , delay = 100; // This allows object creation to always finish
 
 
@@ -176,47 +177,43 @@ describe('Test Limits', function(){
     describe('#cleanupTasks', function(){
       it('should clean up key all entries', function(done){
         var key = taskLimit.redisKeyPrefix+task.a;
-        taskLimit.startTask(task);
-        taskLimit.startTask(task);
-        taskLimit.startTask(task);
-        taskLimit.startTask(task);
-        taskLimit.startTask(task);
-
-        setTimeout(function(){
-          taskLimit.cleanupTasks(function() {
-            rc.llen(key, function(err, len){
-              len.should.equal(0);
-              done();
+        async.times(5, function(n, next){
+          taskLimit.startTask(task, function(){
+            next();
+          })
+        }, function() {
+          setTimeout(function(){
+            taskLimit.cleanupTasks(function() {
+              rc.llen(key, function(err, len){
+                len.should.equal(0);
+                done();
+              });
             });
-          });
-        }, delay);
+          }, delay);
+        });
       });
       it('should clean up only key entries with hostname', function(done){
         var key = taskLimit.redisKeyPrefix+task.a;
-        taskLimit.startTask(task, function(x) {
-          taskLimit.startTask(task, function (x) {
-            taskLimit.startTask(task, function(x) {
-              rc.lpush(key, "{\"host\": \"abcd\", \"date\":\"" + Date() + "\"}", function(y) {
-                rc.lpush(key, "{\"host\": \"abcd\", \"date\":\"" + Date() + "\"}", function(y) {
-                  taskLimit.cleanupTasks(function(x) {
-                    rc.llen(key, function(err, len){
-                      len.should.equal(2);
-                      done();
-                    });
-                  });
+        async.times(3, function(n, next){
+          taskLimit.startTask(task, function() {
+           next();
+          })
+        }, function() {
+          var value = JSON.stringify({host: "abcd", date: Date()});
+            rc.lpush(key, value, value, function(y) {
+              taskLimit.cleanupTasks(function(x) {
+                rc.llen(key, function(err, len){
+                  len.should.equal(2);
+                  done();
                 });
               });
             });
           });
-        });
       });
       it('should not clean up any values', function(done){
         var key = taskLimit.redisKeyPrefix+task.a;
-        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
-        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
-        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
-        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
-        rc.lpush(key, "{\"host\": \"abcd\", \"date\":\""+Date()+"\"}");
+        var value = JSON.stringify({host: "abcd", date: Date()});
+        rc.lpush(key, value, value, value, value, value);
 
         setTimeout(function(){
           taskLimit.cleanupTasks(function() {
