@@ -1,22 +1,13 @@
 {
   "name": "background-task",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Run Node.js tasks on multiple instances.",
   "main": "index.js",
   "author": "Kinvey <support@kinvey.com>",
   "contributors": [
-    {
-      "name": "Brian Wilson",
-      "email": "brian@kinvey.com"
-    },
-    {
-      "name": "Ivan Stoyanov",
-      "email": "ivan@kinvey.com"
-    },
-    {
-      "name": "Michael Salinger",
-      "email": "mjsalinger@kinvey.com"
-    }
+    "Brian Wilson <brian@kinvey.com>",
+    "Ivan Stoyanov <ivan@kinvey.com>",
+    "Michael Salinger <mjsalinger@kinvey.com>"
   ],
   "repository": {
     "type": "git",
@@ -53,5 +44,9 @@
   ],
   "engine": {
     "node": ">=0.6"
+  },
+  "optionalDependencies": {},
+  "engines": {
+    "node": "*"
   }
 }
