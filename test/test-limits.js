@@ -175,6 +175,15 @@ describe('Test Limits', function(){
     });
 
     describe('#cleanupTasks', function(){
+      it('should not throw error if no keys', function(done) {
+
+
+          taskLimit.cleanupTasks(function() {
+
+              done();
+            });
+
+      });
       it('should clean up key all tasks created by the current host', function(done){
         var key = taskLimit.redisKeyPrefix+task.a;
         async.times(5, function(n, next){
