@@ -409,6 +409,106 @@ describe('node-background-task', function(){
                 });
 
             });
+
+            it('should call progress callback', function(done) {
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.progressTask(id, msg);
+                        setTimeout(function() {
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        }, delay);
+                    });
+                });
+
+                var spy = sinon.spy();
+                var cb  = function(){
+                    bgTask.addTask({ kid: 'should call callback' }, function(){
+                      spy.callCount.should.equal(1);
+                      done();
+                    }, spy);
+                };
+                setTimeout(cb, delay);
+            });
+            it('should call progress callback multiple times', function(done) {
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.progressTask(id, msg);
+                        setTimeout(function() {
+                            bgTaskWorker.progressTask(id, msg);
+                            setTimeout(function() {
+                                bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                            }, delay);
+                        }, delay);
+                    });
+                });
+
+                var spy = sinon.spy();
+                var cb  = function(){
+                    bgTask.addTask({ kid: 'should call callback' }, function(){
+                      spy.callCount.should.equal(2);
+                      done();
+                    }, spy);
+                };
+                setTimeout(cb, delay);
+            });
+            it('should not call progress callback if timeout value exceeded', function(done) {
+                var task = background_task.connect({ taskKey: 'kid', timeout: delay });
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        setTimeout(function() {
+                            // At this point, the task should already have been
+                            // aborted, so the method below should throw
+                            // "Attempt to use invalid BackgroundTask".
+                            try {
+                                bgTaskWorker.progressTask(id, msg);
+                            }
+                            catch(e) { }
+                        }, delay + 1);
+                    });
+                });
+
+                var spy = sinon.spy();
+                var cb  = function() {
+                     task.addTask({ kid: 'should timeout' }, function(id, reply) {
+                         spy.callCount.should.equal(0);
+                         reply.should.be.an.instanceOf(Error);
+                         reply.message.should.equal('Task timed out');
+                         task.end();
+                         done();
+                     }, spy);
+                 };
+                 setTimeout(cb, delay);
+            });
+            it('should allow for multiple tasks to have progress callbacks', function(done) {
+                // Two tasks should be able to complete.
+                var count = 2;
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.progressTask(id, msg);
+                        setTimeout(function() {
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        }, delay);
+                    });
+                });
+
+                var spy = sinon.spy();
+                var f   = function() {
+                    bgTask.addTask({ kid: 'multi' }, function(id, reply) {
+                        reply.should.be.eql({ kid: 'multi' });
+
+                        count -= 1;
+                        if(0 === count) {
+                            spy.callCount.should.equal(2);
+                            done();
+                        }
+                    }, spy);
+                };
+
+                process.nextTick(function() { process.nextTick(f); });
+                process.nextTick(f);
+            });
         });
 
         describe('#acceptTask', function(){

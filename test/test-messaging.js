@@ -375,10 +375,10 @@ describe('messaging', function(){
                 }
             });
 
-            it('should accept only SUCCESS, ERROR or FAILED for status', function(){
+            it('should accept only SUCCESS, ERROR, FAILED, or PROGRESS for status', function(){
                 var id = messaging.makeId()
                   , msg = {body: 'hi mom'}
-                  , allowed = ['SUCCESS', 'ERROR', 'FAILED']
+                  , allowed = ['SUCCESS', 'ERROR', 'FAILED', 'PROGRESS']
                   , notAllowed = ['GOOD', 1, 21.2, {test: "object"}, 'S', true]
                   , i;
 
