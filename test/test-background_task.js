@@ -215,6 +215,45 @@ describe('node-background-task', function(){
 
         });
 
+        it('should filter tasks when the task option is set.', function(done) {
+          var taskName = 'myTask';
+          var bgTask   = background_task.connect({
+            task    : taskName,
+            taskKey : 'kid'
+          });
+          var bgTaskWorker1 = background_task.connect({
+            task     : taskName,
+            isWorker : true
+          });
+          var bgTaskWorker2 = background_task.connect({
+            task     : 'myOtherTask',
+            isWorker : true
+          });
+
+          // On failure, `done` will be invoked once by each worker.
+          var count = 0;
+          bgTaskWorker1.on('TASK_AVAILABLE', function(id) {
+            count += 1;
+            bgTaskWorker1.acceptTask(id, function(msg) {
+              bgTaskWorker1.completeTask(id, 'SUCCESS', msg);
+            });
+          });
+          bgTaskWorker2.on('TASK_AVAILABLE', function() {
+            count += 1;
+          });
+
+          // The task below should only be available to `bgTaskWorker1`.
+          bgTask.addTask({ kid: 'task' }, function() {
+            // Cleanup.
+            bgTask.end();
+            bgTaskWorker1.end();
+            bgTaskWorker2.end();
+
+            count.should.equal(1, 'Task was available to both workers.');
+            done();
+          });
+        });
+
     });
 
     describe('BackgroundTask', function(){
@@ -364,7 +403,7 @@ describe('node-background-task', function(){
                         v.should.be.an.instanceOf(Error);
                         v.message.should.eql("Blacklisted");
                         v.debugMessage.should.eql("Blocked, reason: Testing failure, remaining time: 3600");
-                        
+
                         done();
                     });
                 });
