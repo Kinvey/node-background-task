@@ -322,6 +322,19 @@ describe('node-background-task', function(){
         });
 
         describe('#addTask', function(){
+            it('should return the task id', function(done) {
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                    });
+                });
+
+                var id = bgTask.addTask({ kid: 'should return id' }, function(theId) {
+                    theId.should.equal(id);
+                    done();
+                });
+            });
+
             it('should call callback', function(done){
                 var cb;
                 bgTaskWorker.on('TASK_AVAILABLE', function(id){
