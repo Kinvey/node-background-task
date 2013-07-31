@@ -81,6 +81,7 @@ node-background-task uses the following events:
 * `TASK_AVAILABLE` -- There is data available for a background worker.
 * `TASK_DONE` -- A task has finished and the response is ready, task
   may not be successful, just complete.
+* `TASK_PROGRESS` -- Progress is reported for a task. 
 * `TASK_ERROR` -- Something went wrong.
 
 

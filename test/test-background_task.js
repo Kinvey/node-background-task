@@ -97,6 +97,38 @@ describe('node-background-task', function(){
 
             });
 
+            // Test for bugfix where TASK_DONE was emitted for all tasks at once
+            // when one task completes, instead of when each task actually
+            // completes.
+            it('should emit TASK_DONE for each task when it completes', function(done) {
+                var completed = 0, pending = 2, cb;
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        setTimeout(function() {
+                            completed += 1;
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        }, delay);
+                    });
+                });
+
+                bgTask.on('TASK_DONE', function() {
+                    pending -= 1;
+                    if(0 === pending) {
+                        completed.should.equal(2);
+                        done();
+                    }
+                });
+
+                cb = function() {
+                  bgTask.addTask({ kid: 'kidEmitTaskDone' }, function() { });
+                };
+                setTimeout(function() {
+                  cb();
+                  setTimeout(cb, delay);
+                }, delay);
+            });
+
             it('should emit TASK_AVAILABLE when a task is added', function(done){
                 var cb;
                 bgTaskWorker.on('TASK_AVAILABLE',  function(id){
@@ -111,6 +143,25 @@ describe('node-background-task', function(){
                 };
                 setTimeout(cb, delay);
 
+            });
+
+            it('should emit TASK_PROGRESS when task progress is reported', function(done) {
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.progressTask(id, msg);
+                        setTimeout(function() {
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        }, delay);
+                    });
+                });
+
+                var spy = sinon.spy();
+                bgTask.on('TASK_PROGRESS', spy);
+
+                bgTask.addTask({ kid: 'emitTaskProgress' }, function() {
+                    spy.callCount.should.equal(1);
+                    done();
+                });
             });
 
             it('should emit TASK_ERROR if something goes wrong', function(done){
