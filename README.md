@@ -8,18 +8,19 @@ Distributed task execution framework for [node](http://nodejs.org), backed by [r
 
 
 ```js
-var bgTask = require('background-task').connect({task: 'echoBack'})
+var bgTask = require('background-task').connect({ taskKey: 'someKey' })
   , task;
 
 task = {
-  someKey: 'someValue',
-  someOtherKey: ['someValues', 'someMoreValues']
+  someKey      : 'someValue',
+  someOtherKey : ['someValues', 'someMoreValues']
 };
 
 bgTask.addTask(task, function(resp){
     console.log(resp);
 });
 ```
+
 ## Installation
 
     $ npm install background-task
@@ -28,11 +29,11 @@ bgTask.addTask(task, function(resp){
 
 Background tasks involve two concepts, creators and workers.  Creators
 have tasks that they need executed, workers know how to execute
-tasks.  Workers listen for events tagged with a specific *task* and
-execute them.  Should no worker execute the task in a specific time
+tasks. Workers listen for events tagged with a specific *task* and
+execute them. Should no worker execute the task in a specific time
 (which can be customized) then a failure is reported back.
 
-Additionally the amount of active tasks can be limited using a "task
+Additionally, the amount of active tasks can be limited using a "task
 key" (which must be a property at the top level of you task object),
 where only N tasks can be pending on a certain key prior to failures.
 
@@ -40,8 +41,8 @@ where only N tasks can be pending on a certain key prior to failures.
 
 * `connect(options)` -- Creates a new instance of a BackgroundTask, allowing you
   to specify options.
-* `addTask(task, callback)` -- Schedule a task for background
-  execution, calling callback when complete.
+* `addTask(task, callback[, progress])` -- Schedule a task for background
+  execution, calling progress on task progress and `callback when complete.
 
 
 ### Task Workers
@@ -57,6 +58,20 @@ will handle the task.
 * `acceptTask(callback)` -- Accepts a task from the queue to start processing,
   callback must accept two args, `id` and a paramater for the task.
 * `completeTask(taskId, status, msg)` -- Mark a task as complete.
+* `progressTask(taskId, msg)` -- Report task progress.
+
+
+### Options
+
+The `options` hash for creators and workers allows you to set:
+
+* `host` -- redis host.
+* `maxTasksPerKey` -- limit the amount of active tasks based on the "task key".
+* `password` -- redis password.
+* `port` -- redis port.
+* `taskKey` -- the task key.
+* `task` -- listen for specific tasks only.
+* `timeout` -- task timeout (in ms).
 
 
 ### Events
@@ -66,7 +81,9 @@ node-background-task uses the following events:
 * `TASK_AVAILABLE` -- There is data available for a background worker.
 * `TASK_DONE` -- A task has finished and the response is ready, task
   may not be successful, just complete.
+* `TASK_PROGRESS` -- Progress is reported for a task. 
 * `TASK_ERROR` -- Something went wrong.
+
 
 ## Features
 

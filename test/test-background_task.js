@@ -97,6 +97,38 @@ describe('node-background-task', function(){
 
             });
 
+            // Test for bugfix where TASK_DONE was emitted for all tasks at once
+            // when one task completes, instead of when each task actually
+            // completes.
+            it('should emit TASK_DONE for each task when it completes', function(done) {
+                var completed = 0, pending = 2, cb;
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        setTimeout(function() {
+                            completed += 1;
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        }, delay);
+                    });
+                });
+
+                bgTask.on('TASK_DONE', function() {
+                    pending -= 1;
+                    if(0 === pending) {
+                        completed.should.equal(2);
+                        done();
+                    }
+                });
+
+                cb = function() {
+                  bgTask.addTask({ kid: 'kidEmitTaskDone' }, function() { });
+                };
+                setTimeout(function() {
+                  cb();
+                  setTimeout(cb, delay);
+                }, delay);
+            });
+
             it('should emit TASK_AVAILABLE when a task is added', function(done){
                 var cb;
                 bgTaskWorker.on('TASK_AVAILABLE',  function(id){
@@ -111,6 +143,25 @@ describe('node-background-task', function(){
                 };
                 setTimeout(cb, delay);
 
+            });
+
+            it('should emit TASK_PROGRESS when task progress is reported', function(done) {
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.progressTask(id, msg);
+                        setTimeout(function() {
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        }, delay);
+                    });
+                });
+
+                var spy = sinon.spy();
+                bgTask.on('TASK_PROGRESS', spy);
+
+                bgTask.addTask({ kid: 'emitTaskProgress' }, function() {
+                    spy.callCount.should.equal(1);
+                    done();
+                });
             });
 
             it('should emit TASK_ERROR if something goes wrong', function(done){
@@ -215,6 +266,45 @@ describe('node-background-task', function(){
 
         });
 
+        it('should filter tasks when the task option is set.', function(done) {
+          var taskName = 'myTask';
+          var bgTask   = background_task.connect({
+            task    : taskName,
+            taskKey : 'kid'
+          });
+          var bgTaskWorker1 = background_task.connect({
+            task     : taskName,
+            isWorker : true
+          });
+          var bgTaskWorker2 = background_task.connect({
+            task     : 'myOtherTask',
+            isWorker : true
+          });
+
+          // On failure, `done` will be invoked once by each worker.
+          var count = 0;
+          bgTaskWorker1.on('TASK_AVAILABLE', function(id) {
+            count += 1;
+            bgTaskWorker1.acceptTask(id, function(msg) {
+              bgTaskWorker1.completeTask(id, 'SUCCESS', msg);
+            });
+          });
+          bgTaskWorker2.on('TASK_AVAILABLE', function() {
+            count += 1;
+          });
+
+          // The task below should only be available to `bgTaskWorker1`.
+          bgTask.addTask({ kid: 'task' }, function() {
+            // Cleanup.
+            bgTask.end();
+            bgTaskWorker1.end();
+            bgTaskWorker2.end();
+
+            count.should.equal(1, 'Task was available to both workers.');
+            done();
+          });
+        });
+
     });
 
     describe('BackgroundTask', function(){
@@ -232,6 +322,19 @@ describe('node-background-task', function(){
         });
 
         describe('#addTask', function(){
+            it('should return the task id', function(done) {
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                    });
+                });
+
+                var id = bgTask.addTask({ kid: 'should return id' }, function(theId) {
+                    theId.should.equal(id);
+                    done();
+                });
+            });
+
             it('should call callback', function(done){
                 var cb;
                 bgTaskWorker.on('TASK_AVAILABLE', function(id){
@@ -364,11 +467,111 @@ describe('node-background-task', function(){
                         v.should.be.an.instanceOf(Error);
                         v.message.should.eql("Blacklisted");
                         v.debugMessage.should.eql("Blocked, reason: Testing failure, remaining time: 3600");
-                        
+
                         done();
                     });
                 });
 
+            });
+
+            it('should call progress callback', function(done) {
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.progressTask(id, msg);
+                        setTimeout(function() {
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        }, delay);
+                    });
+                });
+
+                var spy = sinon.spy();
+                var cb  = function(){
+                    bgTask.addTask({ kid: 'should call callback' }, function(){
+                      spy.callCount.should.equal(1);
+                      done();
+                    }, spy);
+                };
+                setTimeout(cb, delay);
+            });
+            it('should call progress callback multiple times', function(done) {
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.progressTask(id, msg);
+                        setTimeout(function() {
+                            bgTaskWorker.progressTask(id, msg);
+                            setTimeout(function() {
+                                bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                            }, delay);
+                        }, delay);
+                    });
+                });
+
+                var spy = sinon.spy();
+                var cb  = function(){
+                    bgTask.addTask({ kid: 'should call callback' }, function(){
+                      spy.callCount.should.equal(2);
+                      done();
+                    }, spy);
+                };
+                setTimeout(cb, delay);
+            });
+            it('should not call progress callback if timeout value exceeded', function(done) {
+                var task = background_task.connect({ taskKey: 'kid', timeout: delay });
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        setTimeout(function() {
+                            // At this point, the task should already have been
+                            // aborted, so the method below should throw
+                            // "Attempt to use invalid BackgroundTask".
+                            try {
+                                bgTaskWorker.progressTask(id, msg);
+                            }
+                            catch(e) { }
+                        }, delay + 1);
+                    });
+                });
+
+                var spy = sinon.spy();
+                var cb  = function() {
+                     task.addTask({ kid: 'should timeout' }, function(id, reply) {
+                         spy.callCount.should.equal(0);
+                         reply.should.be.an.instanceOf(Error);
+                         reply.message.should.equal('Task timed out');
+                         task.end();
+                         done();
+                     }, spy);
+                 };
+                 setTimeout(cb, delay);
+            });
+            it('should allow for multiple tasks to have progress callbacks', function(done) {
+                // Two tasks should be able to complete.
+                var count = 2;
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        bgTaskWorker.progressTask(id, msg);
+                        setTimeout(function() {
+                            bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        }, delay);
+                    });
+                });
+
+                var spy = sinon.spy();
+                var f   = function() {
+                    bgTask.addTask({ kid: 'multi' }, function(id, reply) {
+                        reply.should.be.eql({ kid: 'multi' });
+
+                        count -= 1;
+                        if(0 === count) {
+                            spy.callCount.should.equal(2);
+                            done();
+                        }
+                    }, spy);
+                };
+
+                process.nextTick(function() { process.nextTick(f); });
+                process.nextTick(f);
             });
         });
 
