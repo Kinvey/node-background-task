@@ -396,6 +396,23 @@ describe('messaging', function(){
 
             });
 
+            it('should publish only once on concurrent messaging.', function(done) {
+                var stub     = sinon.stub(mBusWorker.pubClient, 'publish')
+                  , body     = { body: 'hi mom' }
+                  , msgId    = messaging.makeId()
+                  , testMode = true;
+
+                mBusWorker.sendResponse(msgId, 'PROGRESS', body, testMode);
+                mBusWorker.sendResponse(msgId, 'PROGRESS', body, testMode);
+                mBusWorker.sendResponse(msgId, 'SUCCESS',  body, testMode);
+
+                setTimeout(function() {
+                    stub.callCount.should.equal(1);
+                    stub.restore();
+                    done();
+                }, 1000);
+            });
+
         });
 
         describe('#makeId', function(){
