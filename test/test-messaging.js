@@ -396,6 +396,60 @@ describe('messaging', function(){
 
             });
 
+            it('should publish only once on concurrent messaging.', function(done) {
+                var stub     = sinon.stub(mBusWorker.pubClient, 'publish')
+                  , body     = { body: 'hi mom' }
+                  , msgId    = messaging.makeId()
+                  , testMode = true;
+
+                mBusWorker.sendResponse(msgId, 'PROGRESS', body, testMode);
+                mBusWorker.sendResponse(msgId, 'PROGRESS', body, testMode);
+                mBusWorker.sendResponse(msgId, 'SUCCESS',  body, testMode);
+
+                setTimeout(function() {
+                    stub.callCount.should.equal(1);
+                    stub.restore();
+                    done();
+                }, 1000);
+            });
+
+
+            it('should publish only once on concurrent messaging, with errors.', function(done) {
+                var pubStub  = sinon.stub(mBusWorker.pubClient, 'publish')
+                  , msgId    = messaging.makeId()
+                  , testMode = true;
+
+                // Force `hset` to throw an error to verify that publish is
+                // called even when one of the concurrent request fails.
+                var errors   = 0;
+                var dataStub = sinon.stub(mBusWorker.dataClient, 'hset', function(hash, msgId, msg, fn) {
+                    try {
+                        if(JSON.parse(msg).error) {
+                            errors += 1;
+                            fn(new Error('Test error'));
+                        }
+                        else {
+                            fn(null, true);
+                        }
+                    }
+                    catch(e) {
+                        // Ignore exceptions.
+                    }
+                });
+
+                mBusWorker.sendResponse(msgId, 'PROGRESS', { error: true },  testMode);
+                mBusWorker.sendResponse(msgId, 'PROGRESS', { error: true },  testMode);
+                mBusWorker.sendResponse(msgId, 'SUCCESS',  { error: false }, testMode);
+
+                setTimeout(function() {
+                    errors.should.equal(2);// Exceptions should have been thrown.
+                    pubStub.callCount.should.equal(1);
+                    pubStub.restore();
+                    dataStub.restore();
+                    done();
+                }, 1000);
+            });
+
         });
 
         describe('#makeId', function(){
