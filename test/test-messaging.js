@@ -126,7 +126,7 @@ describe('messaging', function(){
                     });
                 });
 
-                setTimeout(cback, delay + 10);
+                setTimeout(cback, delay + 50);
 
             });
 
