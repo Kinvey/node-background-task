@@ -30,7 +30,8 @@
   "devDependencies": {
     "should": "*",
     "mocha": "*",
-    "sinon": "*"
+    "sinon": "*",
+    "moment": "*"
   },
   "directories": {
     "lib": ".",
