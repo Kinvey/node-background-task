@@ -66,10 +66,6 @@ describe('messaging', function(){
               , rcPubSub = redis.createClient()
               , rcData = redis.createClient()
               , mBus = messaging.connect(opts)
-              , cback = function(){
-                  rcData.hset(queueName, "0xdeadbeef", message);
-                  rcPubSub.publish("msgChannels:broadcast", "0xdeadbeef");
-              };
 
             mBus.once('data_available', function(id){
                 mBus.acceptMessage(id, function(msg){
@@ -79,8 +75,10 @@ describe('messaging', function(){
                 });
             });
 
-            setTimeout(cback, delay);
-
+            testUtils.waitForSetup(mBus, function() {
+                rcData.hset(queueName, "0xdeadbeef", message);
+                rcPubSub.publish("msgChannels:broadcast", "0xdeadbeef");
+            });
         });
         it('should verify that authentication works', function(done){
             var mBus = messaging.connect({password: 'hiFriends'});
@@ -105,18 +103,24 @@ describe('messaging', function(){
                 mBusWorker.shutdown();
             }
 
-            mBus = messaging.connect();
+            mBus       = messaging.connect();
             mBusWorker = messaging.connect({isResponder: true});
-            done();
+
+            // Wait until setup is complete.
+            var pending = 2;
+            var next    = function() {
+                pending -= 1;
+                if(0 === pending) {
+                    done();
+                }
+            };
+            testUtils.waitForSetup(mBus, next);
+            testUtils.waitForSetup(mBusWorker, next);
         });
 
         describe('Error Handling', function(){
             it('should handle bad items on the worker queue', function(done){
                 var mBus = messaging.connect({isResponder: true, dataHash: "biwq", broadcastChannel: "biwqC"})
-                  , cback = function(){
-                      rc.hset(mBus.dataHash, "0xdeadbeef", "this is not json");
-                      rc.publish(mBus.broadcastChannel, "0xdeadbeef");
-                  };
 
                 mBus.once('data_available', function(id){
                     mBus.acceptMessage(id, function(rep){
@@ -126,15 +130,14 @@ describe('messaging', function(){
                     });
                 });
 
-                setTimeout(cback, delay + 50);
-
+                testUtils.waitForSetup(mBus, function() {
+                    rc.hset(mBus.dataHash, "0xdeadbeef", "this is not json");
+                    rc.publish(mBus.broadcastChannel, "0xdeadbeef");
+                });
             });
 
             it('should handle no item on the worker queue', function(done){
                 var mBus = messaging.connect({isResponder: true, dataQueue: "niwq", broadcastChannel: "niwqC"})
-                  , cback = function(){
-                      rc.publish(mBus.broadcastChannel, "0xdeadbeef");
-                  };
 
                 mBus.once('data_available', function(id){
                     mBus.acceptMessage(id, function(rep){
@@ -144,15 +147,13 @@ describe('messaging', function(){
                     });
                 });
 
-                setTimeout(cback, delay + 50);
-
+                testUtils.waitForSetup(mBus, function() {
+                    rc.publish(mBus.broadcastChannel, "0xdeadbeef");
+                });
             });
 
             it('should handle a mal-formed message', function(done){
                 var mBus = messaging.connect()
-                  , cback = function(){
-                    rc.publish(mBus.listenChannel, "NOSPACES");
-                  };
 
                 mBus.on('error', function(err){
                     err.should.be.an.instanceOf(Error);
@@ -160,15 +161,13 @@ describe('messaging', function(){
                     done();
                 });
 
-                setTimeout(cback, delay);
+                testUtils.waitForSetup(mBus, function() {
+                    rc.publish(mBus.listenChannel, "NOSPACES");
+                });
             });
 
             it('should handle JSON that is corrupt', function(done){
                 var mBus = messaging.connect()
-                  , cback = function(){
-                      rc.hset(mBus.responseHash, "0xdeadbeef", "this is not json");
-                      rc.publish(mBus.listenChannel, "0xdeadbeef FAILED");
-                  };
 
                 mBus.on('error', function(err){
                     err.should.be.an.instanceOf(Error);
@@ -176,14 +175,14 @@ describe('messaging', function(){
                     done();
                 });
 
-                setTimeout(cback, delay);
+                testUtils.waitForSetup(mBus, function() {
+                    rc.hset(mBus.responseHash, "0xdeadbeef", "this is not json");
+                    rc.publish(mBus.listenChannel, "0xdeadbeef FAILED");
+                });
 
             });
             it('should handle when an empty item is pulled from the queue', function(done){
                 var mBus = messaging.connect()
-                  , cback = function(){
-                      rc.publish(mBus.listenChannel, "0xdeadbeef FAILED");
-                  };
 
                 mBus.on('error', function(err){
                     err.should.be.an.instanceOf(Error);
@@ -191,49 +190,16 @@ describe('messaging', function(){
                     done();
                 });
 
-                setTimeout(cback, delay);
-
+                testUtils.waitForSetup(mBus, function() {
+                    rc.publish(mBus.listenChannel, "0xdeadbeef FAILED");
+                });
             });
         });
 
         describe('#shutdown', function(){
             it('should not allow more tasks to complete', function(done){
-                var cback1, cback2;
-
-                mBusWorker.once('data_available', function(id){
-                    mBusWorker.acceptMessage(id, function(msg){
-                        mBusWorker.sendResponse(id, 'SUCCESS', msg);
-                    });
-                });
-
-                cback1 = function(){
-                    var cid = messaging.makeId();
-                    mBus.sendMessage(cid, {body: 'test'}, function(reply){
-                        reply.should.eql({body: 'test'});
-                        mBus.shutdown();
-                        cback2();
-                    });
-                };
-
-                cback2 = function(){
-                    var cid = messaging.makeId();
-                    mBus.sendMessage(cid, {body: 'test'}, function(reply){
-                        reply.should.be.an.instanceOf(Error);
-                        reply.message.should.equal("Attempt to use shutdown MessageBus.");
-                        done();
-                    });
-                };
-
-                // Need to delay just a bit to let everything start-up
-                setTimeout(cback1, delay);
-
-
-            });
-        });
-
-        describe('#sendMessage', function(){
-            it('should call callback', function(done){
                 var cback;
+
                 mBusWorker.once('data_available', function(id){
                     mBusWorker.acceptMessage(id, function(msg){
                         mBusWorker.sendResponse(id, 'SUCCESS', msg);
@@ -242,14 +208,35 @@ describe('messaging', function(){
 
                 cback = function(){
                     var cid = messaging.makeId();
-                    mBus.sendMessage(cid, {'body': 'test'}, function(reply){
-                        reply.should.eql({'body': 'test'});
+                    mBus.sendMessage(cid, {body: 'test'}, function(reply){
+                        reply.should.be.an.instanceOf(Error);
+                        reply.message.should.equal("Attempt to use shutdown MessageBus.");
                         done();
                     });
                 };
 
-                // Need to delay just a bit to let everything start-up
-                process.nextTick(cback);
+                var cid = messaging.makeId();
+                mBus.sendMessage(cid, {body: 'test'}, function(reply){
+                    reply.should.eql({body: 'test'});
+                    mBus.shutdown();
+                    cback();
+                });
+            });
+        });
+
+        describe('#sendMessage', function(){
+            it('should call callback', function(done){
+                mBusWorker.once('data_available', function(id){
+                    mBusWorker.acceptMessage(id, function(msg){
+                        mBusWorker.sendResponse(id, 'SUCCESS', msg);
+                    });
+                });
+
+                var cid = messaging.makeId();
+                mBus.sendMessage(cid, {'body': 'test'}, function(reply){
+                    reply.should.eql({'body': 'test'});
+                    done();
+                });
             });
 
             it('should allow for multiple tasks to be added', function(done){
@@ -262,7 +249,6 @@ describe('messaging', function(){
 
                 test = function(str){
                     var msg = {body: str}
-                      , cback;
 
                     mBusWorker.once('data_available', function(){
                         mBusWorker.acceptMessage(function(id, msg){
@@ -270,16 +256,11 @@ describe('messaging', function(){
                         });
                     });
 
-                    cback = function(){
-                        mBus.sendMessage(messaging.makeId(), msg, function(reply){
-                            reply.should.be.instanceOf(Error);
-                            reply.message.should.equal('Payload too large!');
-                            done();
-                        });
-                    };
-
-                    // Need to delay just a bit to let everything start-up
-                    setTimeout(cback, delay);
+                    mBus.sendMessage(messaging.makeId(), msg, function(reply){
+                        reply.should.be.instanceOf(Error);
+                        reply.message.should.equal('Payload too large!');
+                        done();
+                    });
                 };
 
                 testUtils.testWithFile(twoMegs, test);
@@ -300,9 +281,7 @@ describe('messaging', function(){
                         done();
                     });
                 };
-
-                // Need to delay just a bit to let everything start-up
-                setTimeout(cback, delay);
+                cback();
             });
         });
 
@@ -410,7 +389,7 @@ describe('messaging', function(){
                     stub.callCount.should.equal(1);
                     stub.restore();
                     done();
-                }, 1000);
+                }, delay);
             });
 
 
@@ -447,7 +426,7 @@ describe('messaging', function(){
                     pubStub.restore();
                     dataStub.restore();
                     done();
-                }, 1000);
+                }, delay);
             });
 
         });
