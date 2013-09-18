@@ -375,7 +375,6 @@ describe('node-background-task', function(){
             var task = background_task.connect({taskKey: "kid", timeout: normalTimeoutTime});
             var start = moment();
 
-
             task.addTask({kid: "should timeout", body: "test"}, {taskTimeout: zeroTimeoutTime}, function(id, reply){
               var diff = moment().diff(start);
               diff.should.be.approximately(normalTimeoutTime, timeoutMarginOfError);
@@ -384,7 +383,6 @@ describe('node-background-task', function(){
               task.end();
               done();
             });
-
           });
 
           it('should use default timeout if a task timeout with a negaitve integer is passed', function(done){
@@ -399,7 +397,6 @@ describe('node-background-task', function(){
               task.end();
               done();
             });
-
           });
 
             it('should not call callback twice if timeout value exceeded (Will fail with double done() if code is broken)', function(done){
