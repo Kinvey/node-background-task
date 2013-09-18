@@ -18,6 +18,7 @@
 
 var sinon = require('sinon')
   , util = require('util')
+  , moment = require('moment')
   , background_task = require('../lib/background_task')
   , should = require('should')
   , redis = require('redis')
@@ -25,6 +26,12 @@ var sinon = require('sinon')
   , delay = 30 // This allows object creation to always finish
   , testUtils = require('./test-utils')
   , blacklist = require('../lib/blacklist') // Needed for timeouts and keys
+  , longTaskTimeoutTime = 10000
+  , longMochaTimeoutTime = 15000
+  , zeroTimeoutTime = 0
+  , negativeTimeoutTime = -1
+  , timeoutMarginOfError = 100
+  , normalTimeoutTime = 1000
   , ll = function(m){
       var d = new Date()
       , t = d.toISOString();
@@ -332,6 +339,79 @@ describe('node-background-task', function(){
                     done();
                 });
             });
+
+          it('should use default timeout value if no task timeout value is passed', function(done){
+            var cb, task = background_task.connect({taskKey: "kid", timeout: normalTimeoutTime});
+            var start = moment();
+
+            cb = function(){
+              task.addTask({kid: "should timeout", body: "test"}, function(id, reply){
+                var diff = moment().diff(start);
+                diff.should.be.approximately(normalTimeoutTime, timeoutMarginOfError);
+                reply.should.be.an.instanceOf(Error);
+                reply.message.should.equal('Task timed out');
+                task.end();
+                done();
+              });
+
+            };
+            setTimeout(cb, delay);
+          });
+
+          it('should allow specific timeout to be passed as part of a task', function(done){
+            this.timeout(longMochaTimeoutTime);
+            var cb, task = background_task.connect({taskKey: "kid", timeout: 200});
+            var start = moment();
+
+            cb = function(){
+              task.addTask({kid: "should timeout", body: "test"}, {taskTimeout: longTaskTimeoutTime}, function(id, reply){
+                var diff = moment().diff(start);
+                diff.should.be.approximately(longTaskTimeoutTime, timeoutMarginOfError);
+                reply.should.be.an.instanceOf(Error);
+                reply.message.should.equal('Task timed out');
+                task.end();
+                done();
+              });
+
+            };
+            setTimeout(cb, delay);
+          });
+
+          it('should use default timeout if a task timeout of zero is passed', function(done){
+            var cb, task = background_task.connect({taskKey: "kid", timeout: normalTimeoutTime});
+            var start = moment();
+
+            cb = function(){
+              task.addTask({kid: "should timeout", body: "test"}, {taskTimeout: zeroTimeoutTime}, function(id, reply){
+                var diff = moment().diff(start);
+                diff.should.be.approximately(normalTimeoutTime, timeoutMarginOfError);
+                reply.should.be.an.instanceOf(Error);
+                reply.message.should.equal('Task timed out');
+                task.end();
+                done();
+              });
+
+            };
+            setTimeout(cb, delay);
+          });
+
+          it('should use default timeout if a task timeout with a negaitve integer is passed', function(done){
+            var cb, task = background_task.connect({taskKey: "kid", timeout: normalTimeoutTime});
+            var start = moment();
+
+            cb = function(){
+              task.addTask({kid: "should timeout", body: "test"}, {taskTimeout: negativeTimeoutTime}, function(id, reply){
+                var diff = moment().diff(start);
+                diff.should.be.approximately(normalTimeoutTime, timeoutMarginOfError);
+                reply.should.be.an.instanceOf(Error);
+                reply.message.should.equal('Task timed out');
+                task.end();
+                done();
+              });
+
+            };
+            setTimeout(cb, delay);
+          });
 
             it('should not call callback twice if timeout value exceeded (Will fail with double done() if code is broken)', function(done){
                 var task = background_task.connect({taskKey: "kid", timeout: delay});
