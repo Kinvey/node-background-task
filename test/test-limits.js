@@ -42,9 +42,25 @@ describe('Test Limits', function(){
 
     describe('redis', function(){
         it('should verify that authentication works', function(done){
-            var limit = new limits.TaskLimit({taskKey: "auth",  password: "invalid", maxTasksPerKey: 5});
-            limit.on('error', function(){done();});
-
+          // have to augment console.log as version 0.8.5 of redis no longer throws an error when a password
+          // is supplied but none is required,
+          var x = console.log;
+          var messages = [];
+          var warnMsg = "";
+          console.log = function(args) {
+            messages.push(args);
+            x.call(this, args);
+          };
+            var limit = new limits.TaskLimit({taskKey: "auth",  password: "invalid", maxTasksPerKey: 5}, function() {
+              for (var i = 0; i < messages.length; i++) {
+                if (messages[i] = "Warning: Redis server does not require a password, but a password was supplied.") {
+                  warnMsg = messages[i];
+                }
+              }
+              warnMsg.should.eql("Warning: Redis server does not require a password, but a password was supplied.");
+              console.log = x;
+              done();
+            });
         });
     });
 

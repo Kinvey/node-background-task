@@ -41,9 +41,27 @@ describe('Blacklist', function(){
     });
 
     describe('redis', function(){
+
         it('should verify that authentication works', function(done){
-            var tmpBL = new bl.Blacklist({taskKey: "auth",  password: "invalid"});
-            tmpBL.on('error', function(){done();});
+          // have to augment console.log as version 0.8.5 of redis no longer throws an error when a password
+          // is supplied but none is required,
+          var x = console.log;
+          var messages = [];
+          var warnMsg = "";
+          console.log = function(args) {
+              messages.push(args);
+            x.call(this, args);
+          };
+          var tmpBL = new bl.Blacklist({taskKey: "auth",  password: "invalid"}, function() {
+            for (var i = 0; i < messages.length; i++) {
+              if (messages[i] = "Warning: Redis server does not require a password, but a password was supplied.") {
+                warnMsg = messages[i];
+              }
+            }
+            warnMsg.should.eql("Warning: Redis server does not require a password, but a password was supplied.");
+            console.log = x;
+            done();
+          });
 
         });
     });
