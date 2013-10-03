@@ -1,6 +1,6 @@
 {
   "name": "background-task",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Run Node.js tasks on multiple instances.",
   "main": "index.js",
   "author": "Kinvey <support@kinvey.com>",
