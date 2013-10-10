@@ -91,16 +91,16 @@ describe('messaging', function(){
               x.call(this, args);
             };
             var mBus = messaging.connect({password: 'hiFriends'}, function() {
-            for (var i = 0; i < messages.length; i++) {
-              if (messages[i] = "Warning: Redis server does not require a password, but a password was supplied.") {
-                warnMsg = messages[i];
+              for (var i = 0; i < messages.length; i++) {
+                if (messages[i] = "Warning: Redis server does not require a password, but a password was supplied.") {
+                  warnMsg = messages[i];
+                }
               }
-            }
-            warnMsg.should.eql("Warning: Redis server does not require a password, but a password was supplied.");
-            console.log = x;
-            mBus.shutdown();
-            done();
-          });
+              warnMsg.should.eql("Warning: Redis server does not require a password, but a password was supplied.");
+              console.log = x;
+              mBus.shutdown();
+              done();
+            });
 
         });
     });
