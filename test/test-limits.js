@@ -128,7 +128,7 @@ describe('Test Limits', function(){
                     v.message.should.equal('Too many tasks');
                     done();
                 });
-            }, (max+1)*10);
+            }, (max+20)*10);
         });
 
         it('should handle 0 wrap-around', function(done){
