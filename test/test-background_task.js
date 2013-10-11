@@ -209,7 +209,7 @@ describe('node-background-task', function(){
     describe('#connect', function(){
         it('should return a valid BackgroundTask with no options', function(){
             var task = background_task.connect();
-            task.should.be.a('object');
+            task.should.be.an.Object;
             task.end();
         });
 
