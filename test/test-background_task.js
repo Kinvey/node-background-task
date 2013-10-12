@@ -209,7 +209,7 @@ describe('node-background-task', function(){
     describe('#connect', function(){
         it('should return a valid BackgroundTask with no options', function(){
             var task = background_task.connect();
-            task.should.be.a('object');
+            task.should.be.an.Object;
             task.end();
         });
 
@@ -223,7 +223,7 @@ describe('node-background-task', function(){
                 port: "6379",
                 isWorker: true
             });
-            task.should.be.a('object');
+            task.should.be.an.Object;
             task.end();
         });
 
@@ -234,7 +234,7 @@ describe('node-background-task', function(){
                 host: "localhost",
                 isWorker: true
             });
-            task.should.be.a('object');
+            task.should.be.an.Object;
             task.end();
         });
         it('should be a worker when isWorker: true', function(done){
