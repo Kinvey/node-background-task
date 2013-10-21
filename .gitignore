@@ -9,6 +9,7 @@ lib-cov
 *.iml
 
 .idea
+.jshint
 
 pids
 logs

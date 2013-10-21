@@ -139,7 +139,7 @@ describe('Blacklist', function(){
             var b = new bl.Blacklist({taskKey: "kid", failureInterval:10});
             var taskKey = "newFailure";
             var reason = "new failure";
-            var blacklistKey = b.redisKeyPrefix + taskKey + ":count";
+            var blacklistKey = b.keyPrefix + taskKey + ":count";
             b.addFailure(taskKey, reason, function(status){
                 status.should.be.eql("OK");
                 rc.get(blacklistKey, function(e1, r1){
@@ -158,7 +158,7 @@ describe('Blacklist', function(){
             var b = new bl.Blacklist({taskKey: "kid", failureInterval:10});
             var taskKey = "incr";
             var reason = "incr";
-            var blacklistKey = b.redisKeyPrefix + taskKey + ":count";
+            var blacklistKey = b.keyPrefix + taskKey + ":count";
             b.addFailure(taskKey, reason, function(status){
                 status.should.be.eql("OK");
                 b.addFailure(taskKey, reason, function(status2){
@@ -232,7 +232,7 @@ describe('Blacklist', function(){
             var b = new bl.Blacklist({taskKey: "kid"});
             var taskKey = "reset";
             var reason = "reset case";
-            var blacklistKey = b.redisKeyPrefix + taskKey + ":count";
+            var blacklistKey = b.keyPrefix + taskKey + ":count";
 
             b.addFailure(taskKey, reason, function(status){
                 status.should.be.eql("OK");

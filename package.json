@@ -26,7 +26,8 @@
   "dependencies": {
     "node-uuid": "*",
     "async": "0.2.x",
-    "redis": "0.8.6"
+    "redis": "0.8.6",
+    "precond": "0.2.2"
   },
   "devDependencies": {
     "should": "*",

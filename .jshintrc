@@ -1,0 +1,14 @@
+{
+  "eqeqeq": true,
+  "forin": true,
+  "noarg": true,
+  "bitwise": true,
+  "globalstrict": true,
+  "undef": true,
+  "unused": true,
+  "curly": true,
+  "node": true,
+  "indent": 2,
+  "maxerr": 1000
+}
+

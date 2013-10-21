@@ -61,10 +61,10 @@ describe('node-background-task', function(){
 
     afterEach(function() {
         if(bgTask) {
-            bgTask.end();
+            bgTask.shutdown();
         }
         if(bgTaskWorker) {
-            bgTaskWorker.end();
+            bgTaskWorker.shutdown();
         }
     });
 
@@ -210,7 +210,7 @@ describe('node-background-task', function(){
         it('should return a valid BackgroundTask with no options', function(){
             var task = background_task.connect();
             task.should.be.an.Object;
-            task.end();
+            task.shutdown();
         });
 
         it('should return a valid BackgroundTask with all options', function(){
@@ -224,7 +224,7 @@ describe('node-background-task', function(){
                 isWorker: true
             });
             task.should.be.an.Object;
-            task.end();
+            task.shutdown();
         });
 
 
@@ -235,7 +235,7 @@ describe('node-background-task', function(){
                 isWorker: true
             });
             task.should.be.an.Object;
-            task.end();
+            task.shutdown();
         });
         it('should be a worker when isWorker: true', function(done){
             bgTaskWorker.on('TASK_AVAILABLE', function(id){
@@ -278,9 +278,9 @@ describe('node-background-task', function(){
           // The task below should only be available to `bgTaskWorker1`.
           bgTask.addTask({ kid: 'task' }, function() {
             // Cleanup.
-            bgTask.end();
-            bgTaskWorker1.end();
-            bgTaskWorker2.end();
+            bgTask.shutdown();
+            bgTaskWorker1.shutdown();
+            bgTaskWorker2.shutdown();
 
             count.should.equal(1, 'Task was available to both workers.');
             done();
@@ -294,7 +294,7 @@ describe('node-background-task', function(){
         describe('#end', function(){
             it('should not allow more tasks to complete', function(done){
                 var t = background_task.connect({taskKey: "hi"});
-                t.end();
+                t.shutdown();
                 t.addTask({hi: "test"}, function(id, v){
                     v.should.be.an.instanceOf(Error);
                     v.message.should.equal('Attempt to use invalid BackgroundTask');
@@ -335,7 +335,7 @@ describe('node-background-task', function(){
                 task.addTask({kid: "should timeout", body: "test"}, function(id, reply){
                     reply.should.be.an.instanceOf(Error);
                     reply.message.should.equal('Task timed out');
-                    task.end();
+                    task.shutdown();
                     done();
                 });
             });
@@ -349,7 +349,7 @@ describe('node-background-task', function(){
               diff.should.be.approximately(normalTimeoutTime, timeoutMarginOfError);
               reply.should.be.an.instanceOf(Error);
               reply.message.should.equal('Task timed out');
-              task.end();
+              task.shutdown();
               done();
             });
 
@@ -365,7 +365,7 @@ describe('node-background-task', function(){
               diff.should.be.approximately(longTaskTimeoutTime, timeoutMarginOfError);
               reply.should.be.an.instanceOf(Error);
               reply.message.should.equal('Task timed out');
-              task.end();
+              task.shutdown();
               done();
             });
 
@@ -380,7 +380,7 @@ describe('node-background-task', function(){
               diff.should.be.approximately(normalTimeoutTime, timeoutMarginOfError);
               reply.should.be.an.instanceOf(Error);
               reply.message.should.equal('Task timed out');
-              task.end();
+              task.shutdown();
               done();
             });
           });
@@ -394,7 +394,7 @@ describe('node-background-task', function(){
               diff.should.be.approximately(normalTimeoutTime, timeoutMarginOfError);
               reply.should.be.an.instanceOf(Error);
               reply.message.should.equal('Task timed out');
-              task.end();
+              task.shutdown();
               done();
             });
           });
@@ -408,7 +408,7 @@ describe('node-background-task', function(){
                         } else {
                             setTimeout(function(){
                                 bgTaskWorker.completeTask(id, 'SUCCESS', r);
-                                task.end();
+                                task.shutdown();
                                 done();
                             }, delay+1);
                         }
@@ -560,7 +560,7 @@ describe('node-background-task', function(){
                     spy.callCount.should.equal(0);
                     reply.should.be.an.instanceOf(Error);
                     reply.message.should.equal('Task timed out');
-                    task.end();
+                    task.shutdown();
                     done();
                 }, spy);
             });
@@ -651,7 +651,7 @@ describe('node-background-task', function(){
                 testUtils.waitForSetup(btw, function() {
                     bgTask.addTask({kid: "only called once", body: "test"}, function(id, reply){
                         count.should.equal(1);
-                        btw.end();
+                        btw.shutdown();
                         done();
                     });
                 });
@@ -669,7 +669,7 @@ describe('node-background-task', function(){
             it('it should reject tasks without a status', function(){
                 (function() {
                     bgTaskWorker.completeTask("12345", undefined, msg);
-                }).should.throw('Missing msgId, status or msg.');
+                }).should.throw(/is not a valid status/);
             });
 
             it('it should reject tasks without message', function(){
@@ -687,7 +687,6 @@ describe('node-background-task', function(){
 
                 for (i = 0; i < allowed.length; i = i + 1){
                     (function(){
-                        bgTaskWorker.msgBus.idToChannelMap[id] = "retChn";
                         bgTaskWorker.completeTask(id, allowed[i], msg);
                     }).should.not.throw();
                 }
@@ -695,7 +694,7 @@ describe('node-background-task', function(){
                 for (i = 0; i < notAllowed.length; i = i + 1){
                     (function(){
                         bgTaskWorker.completeTask(id, notAllowed[i], msg);
-                    }).should.throw(/is not a valid status\./);
+                    }).should.throw(/is not a valid status/);
                 }
             });
         });
@@ -737,7 +736,7 @@ describe('node-background-task', function(){
                     bl.addFailure(key, "Testing failure", function(reason){
                         process.nextTick(next);
                     });
-                }, function(err, _) {
+                }, function(err, result) {
                     setTimeout(function(){
                         async.timesSeries(count, function(n, next){
                             bl.addFailure(key, "Testing failure", function(reason){
