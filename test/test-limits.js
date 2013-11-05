@@ -99,9 +99,7 @@ describe('Test Limits', function(){
     describe('#startTask', function(){
         it('should increment the task counter', function(done){
             var key = taskLimit.keyPrefix+task.a;
-          console.log("expected" + key);
             taskLimit.startTask(task, function(v){
-              console.log("v: " + v);
                 setTimeout(function(){
                     rc.llen(taskLimit.keyPrefix+task.a, function(err, r){
                         r.should.eql(v);

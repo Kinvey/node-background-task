@@ -19,5 +19,4 @@ test-limits:
 test-notification_bus:
 	@./node_modules/.bin/mocha test/test-notification_bus.js
 
-
 .PHONY: test

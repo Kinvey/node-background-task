@@ -19,13 +19,8 @@ var sinon = require('sinon')
   , should = require('should')
   , redis = require('redis')
   , util = require('util')
-  , delay = 60 // This allows object creation to always finish
   , testUtils = require('./test-utils')
-  , ll = function(m){
-    var d = new Date()
-      , t = d.toISOString();
-    util.debug(t + ": " + m);
-  };
+  , async = require('async');
 
 describe('messaging', function(){
   describe('#initialize', function(){
@@ -90,7 +85,7 @@ describe('messaging', function(){
 
       testUtils.waitForSetup(notificationBus, function() {
         rcData.hset(status.toLowerCase() + hashName, "0xdeadbeef", message);
-        rcPubSub.publish("msgChannels:broadcast", JSON.stringify({_id:"0xdeadbeef", status: status}));
+        rcPubSub.publish(notificationBus.broadcastChannel, JSON.stringify({_id:"0xdeadbeef", status: status}));
       });
     });
 
@@ -104,6 +99,7 @@ describe('messaging', function(){
         messages.push(args);
         x.call(this, args);
       };
+
       var notificationBus = notification.initialize({password: 'hiFriends'}, function() {
         for (var i = 0; i < messages.length; i++) {
           if (messages[i] = "Warning: Redis server does not require a password, but a password was supplied.") {
@@ -189,7 +185,7 @@ describe('messaging', function(){
       it('should handle a mal-formed message', function(done){
         var nBus = notification.initialize();
 
-        nBus.on('error', function(err){     console.log(err);
+        nBus.on('error', function(err){
           err.should.be.an.instanceOf(Error);
           err.message.should.equal('Invalid message received!');
           done();
@@ -266,24 +262,73 @@ describe('messaging', function(){
         });
       });
     });
-    /*
+
     describe('#sendMessage', function(){
+
+      it('should reject notifications without ids', function(done){
+        notificationBusWorker.sendNotification(notificationBus.broadcastChannel, null, {body: "hi"}, 'SUCCESS', function (err, result) {
+          err.should.be.instanceOf(Error);
+          err.message.should.match(/^Invalid Argument/);
+          done();
+        });
+      });
+
+      it('should reject notifications without a status', function(done){
+        notificationBusWorker.sendNotification(notificationBus.broadcastChannel, notification.makeId(), {body: "hi"}, undefined, function (err, result) {
+          err.should.be.instanceOf(Error);
+          err.message.should.match(/^Invalid Argument/);
+          done();
+        });
+      });
+
+      it('should reject empty messages', function(done){
+        notificationBusWorker.sendNotification(notificationBus.broadcastChannel, notification.makeId(), "SOMESTATUS", undefined, function (err, result) {
+          err.should.be.instanceOf(Error);
+          err.message.should.match(/^Invalid Argument/);
+          done();
+        });
+      });
+
       it('should call callback', function(done){
-        mBusWorker.once('data_available', function(id){
-          mBusWorker.acceptMessage(id, function(msg){
-            mBusWorker.sendResponse(id, 'SUCCESS', msg);
+        notificationBusWorker.once('notification_received', function(notification){
+          notificationBusWorker.processNotification(notification.id, 'NEWTASK', function(msg){
+            notificationBusWorker.sendNotification(notification._listenChannel, notification.id, msg, 'SUCCESS');
           });
         });
 
-        var cid = messaging.makeId();
-        mBus.sendMessage(cid, {'body': 'test'}, function(reply){
-          reply.should.eql({'body': 'test'});
+        var cid = notification.makeId();
+        notificationBus.sendNotification(notificationBus.broadcastChannel, cid, {'body': 'test'}, "NEWTASK", function(err, reply){
+          reply.should.eql(notificationBus.listenChannel);
           done();
         });
       });
 
       it('should allow for multiple tasks to be added', function(done){
-        done();
+        var count = 5,
+          tasksToAdd = [];
+
+        var task = function(cb) {
+          var cid = notification.makeId();
+          notificationBus.sendNotification(notificationBus.broadcastChannel, cid, {'body': 'test'}, "NEWTASK", function(err, reply){
+            cb();
+          });
+        };
+
+        var callback = function(err, reply) {
+          should.not.exist(err);
+          should.exist(reply);
+          rc.hlen("newtask" + notificationBus.baseHash, function(err, result) {
+            should.not.exist(err);
+            result.should.eql(5);
+            done();
+          });
+        };
+
+        for (var i = 0; i < count; i++) {
+          tasksToAdd.push(task);
+        }
+
+        async.parallel(tasksToAdd, callback);
       });
 
       it('should reject excessive payloads', function(done){
@@ -293,15 +338,15 @@ describe('messaging', function(){
         test = function(str){
           var msg = {body: str}
 
-          mBusWorker.once('data_available', function(){
-            mBusWorker.acceptMessage(function(id, msg){
-              mBusWorker.sendResponse(id, 'SUCCESS', msg);
+          notificationBusWorker.once('notification_received', function(task){
+            notificationBusWorker.processNotification(task.id, "NEWTASK", function(err, msg){
+              notificationBusWorker.sendNotification(task._listenChannel, task.id, msg, 'SUCCESS');
             });
           });
 
-          mBus.sendMessage(messaging.makeId(), msg, function(reply){
-            reply.should.be.instanceOf(Error);
-            reply.message.should.equal('Payload too large!');
+          notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), msg, "NEWTASK", function(err, reply){
+            err.should.be.instanceOf(Error);
+            err.message.should.equal('Payload too large!');
             done();
           });
         };
@@ -311,16 +356,16 @@ describe('messaging', function(){
 
       it('should reject message that are not JSON', function(done){
         var cback;
-        mBusWorker.once('data_available', function(){
-          mBusWorker.acceptMessage(function(id, msg){
-            mBusWorker.sendResponse(id, 'SUCCESS', msg);
+        notificationBusWorker.once('notification_received', function(task){
+          notificationBusWorker.processNotification(task.id, "NEWTASK", function(err, msg){
+            notificationBusWorker.sendNotification(task._listenChannel, task.id, msg, 'SUCCESS');
           });
         });
 
         cback = function(){
-          mBus.sendMessage(messaging.makeId(), cback, function(reply){
-            reply.should.be.instanceOf(Error);
-            reply.message.should.equal('Error converting message to JSON.');
+          notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), cback, "NewTask", function(err, reply){
+            err.should.be.instanceOf(Error);
+            err.message.should.equal('Error converting message to JSON.');
             done();
           });
         };
@@ -328,157 +373,40 @@ describe('messaging', function(){
       });
     });
 
-    describe('#processMessage', function(){
+    describe('#processNotification', function(){
       it('should reject no parameters', function(){
         (function() {
-          mBusWorker.acceptMessage(null, null);
-        }).should.throw('Missing Message ID.');
+          notificationBusWorker.processNotification(null, null, function(err, result) {
+            err.should.be.instanceOf(Error);
+            err.message.should.equal("Invalid Arguments");
+          });
+        })();
       });
 
       it('should reject missing ids', function(){
         (function() {
-          mBusWorker.acceptMessage(null, function(id, msg){});
-        }).should.throw('Missing Message ID.');
+          notificationBusWorker.processNotification(null, "status", function(err, result){
+            err.should.be.instanceOf(Error);
+            err.message.should.equal("Invalid Arguments");
+          });
+        })();
       });
 
-      it('should reject invalid callbacks', function(){
-        (function() {
-          mBusWorker.acceptMessage("0xdeadbeef");
-        }).should.throw('Invalid callback.');
-
-        (function() {
-          mBusWorker.acceptMessage("0xdeadbeef", function(){});
-        }).should.throw('Missing parameters in callback.');
-
-      });
       it('should reject messages not in redis', function(done){
-        mBusWorker.acceptMessage("NOT FOUND", function(reply){
-          reply.should.be.an.instanceOf(Error);
-          reply.message.should.equal("DB doesn't recognize message");
+        notificationBusWorker.processNotification("NOT FOUND", "ANYSTATUS",function(err, reply){
+          err.should.be.an.instanceOf(Error);
+          err.message.should.match(/^No message for key/);
           done();
         });
 
       });
-    });
-
-    describe('#sendResponse', function(){
-      it('should reject tasks without ids', function(done){
-        try {
-          mBusWorker.sendResponse(null, 'SUCCESS', {body: "hi"});
-        } catch(e) {
-          e.should.be.instanceOf(Error);
-          e.message.should.equal('Missing msgId, status or msg.');
-          done();
-        }
-      });
-
-      it('should reject responding to tasks that were not accepted', function(){
-        (function(){
-          mBusWorker.sendResponse(messaging.makeId(), 'FAILED', {body: "Yo!"});
-        }).should.throw('Attempt to respond to message that was never accepted');
-      });
-
-      it('should reject tasks without a status', function(done){
-        try {
-          mBusWorker.sendResponse(messaging.makeId(), undefined, {body: "hi"});
-        } catch(e) {
-          e.should.be.instanceOf(Error);
-          e.message.should.equal('Missing msgId, status or msg.');
-          done();
-        }
-      });
-
-      it('should reject empty messages', function(){
-        try {
-          mBusWorker.sendResponse(messaging.makeId(), 'SUCCESS', null);
-        } catch(e) {
-          e.should.be.instanceOf(Error);
-          e.message.should.equal('Missing msgId, status or msg.');
-        }
-      });
-
-      it('should accept only SUCCESS, ERROR, FAILED, or PROGRESS for status', function(){
-        var id = messaging.makeId()
-          , msg = {body: 'hi mom'}
-          , allowed = ['SUCCESS', 'ERROR', 'FAILED', 'PROGRESS']
-          , notAllowed = ['GOOD', 1, 21.2, {test: "object"}, 'S', true]
-          , i;
-
-        for (i = 0; i < allowed.length; i = i + 1){
-          (function(){
-            mBusWorker.sendResponse(msg, allowed[i], msg, true);
-          }).should.not.throw();
-        }
-
-        for (i = 0; i < notAllowed.length; i = i + 1){
-          (function(){
-            mBusWorker.sendResponse(msg, notAllowed[i], msg);
-          }).should.throw(/is not a valid status\./);
-        }
-
-      });
-
-      it('should publish only once on concurrent messaging.', function(done) {
-        var stub     = sinon.stub(mBusWorker.pubClient, 'publish')
-          , body     = { body: 'hi mom' }
-          , msgId    = messaging.makeId()
-          , testMode = true;
-
-        mBusWorker.sendResponse(msgId, 'PROGRESS', body, testMode);
-        mBusWorker.sendResponse(msgId, 'PROGRESS', body, testMode);
-        mBusWorker.sendResponse(msgId, 'SUCCESS',  body, testMode);
-
-        setTimeout(function() {
-          stub.callCount.should.equal(1);
-          stub.restore();
-          done();
-        }, delay);
-      });
-
-
-      it('should publish only once on concurrent messaging, with errors.', function(done) {
-        var pubStub  = sinon.stub(mBusWorker.pubClient, 'publish')
-          , msgId    = messaging.makeId()
-          , testMode = true;
-
-        // Force `hset` to throw an error to verify that publish is
-        // called even when one of the concurrent request fails.
-        var errors   = 0;
-        var dataStub = sinon.stub(mBusWorker.dataClient, 'hset', function(hash, msgId, msg, fn) {
-          try {
-            if(JSON.parse(msg).error) {
-              errors += 1;
-              fn(new Error('Test error'));
-            }
-            else {
-              fn(null, true);
-            }
-          }
-          catch(e) {
-            // Ignore exceptions.
-          }
-        });
-
-        mBusWorker.sendResponse(msgId, 'PROGRESS', { error: true },  testMode);
-        mBusWorker.sendResponse(msgId, 'PROGRESS', { error: true },  testMode);
-        mBusWorker.sendResponse(msgId, 'SUCCESS',  { error: false }, testMode);
-
-        setTimeout(function() {
-          errors.should.equal(2);// Exceptions should have been thrown.
-          pubStub.callCount.should.equal(1);
-          pubStub.restore();
-          dataStub.restore();
-          done();
-        }, delay);
-      });
-
     });
 
     describe('#makeId', function(){
       it('should make unique ids', function(){
-        var a = messaging.makeId()
-          , b = messaging.makeId()
-          , c = messaging.makeId()
+        var a = notification.makeId()
+          , b = notification.makeId()
+          , c = notification.makeId()
           , i, id, last;
 
         a.should.not.equal(b);
@@ -487,11 +415,11 @@ describe('messaging', function(){
 
         last = c;
         for (i = 0; i < 10000; i = i + 1){
-          id = messaging.makeId();
+          id = notification.makeId();
           id.should.not.equal(last);
           last = id;
         }
       });
-    });  */
+    });
   });
 });

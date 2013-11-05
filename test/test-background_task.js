@@ -206,14 +206,70 @@ describe('node-background-task', function(){
         });
     });
 
-    describe('#connect', function(){
-        it('should return a valid BackgroundTask with no options', function(){
+    describe('#initialize', function(){
+        it('should return a valid TaskClient with no options', function(){
             var task = background_task.connect();
-            task.should.be.an.Object;
+            task.should.be.an.instanceOf(Object);
+            task.addTask.should.be.an.instanceOf(Function);
+            should.not.exist(task.acceptTask);
+            should.not.exist(task.reportTask);
+            should.not.exist(task.reportBadTask);
+            should.not.exist(task.completeTask);
+            should.not.exist(task.progressTask);
             task.shutdown();
         });
 
-        it('should return a valid BackgroundTask with all options', function(){
+        it('should return a valid TaskClient with all options', function() {
+          var task = background_task.connect({
+            task: "hey",
+            taskKey: "kid",
+            queue: "someNewQueue",
+            outputHash: "someOutputHash",
+            host: "0.0.0.0",
+            port: "6379",
+            isWorker: false
+          });
+          task.should.be.an.instanceOf(Object);
+          task.addTask.should.be.an.instanceOf(Function);
+          should.not.exist(task.acceptTask);
+          should.not.exist(task.reportTask);
+          should.not.exist(task.reportBadTask);
+          should.not.exist(task.completeTask);
+          should.not.exist(task.progressTask);
+          task.shutdown();
+
+        });
+
+      it('should return a valid TaskClient with some options', function() {
+        var task = background_task.connect({
+          queue: "newQueue",
+          host: "localhost",
+          isWorker: false
+        });
+        task.should.be.an.instanceOf(Object);
+        task.addTask.should.be.an.instanceOf(Function);
+        should.not.exist(task.acceptTask);
+        should.not.exist(task.reportTask);
+        should.not.exist(task.reportBadTask);
+        should.not.exist(task.completeTask);
+        should.not.exist(task.progressTask);
+        task.shutdown();
+
+      });
+
+        it('should return a valid TaskServer with no options', function(){
+          var task = background_task.connect({isWorker: true});
+          task.should.be.an.instanceOf(Object);
+          should.not.exist(task.addTask);
+          task.acceptTask.should.be.an.instanceOf(Function);
+          task.reportTask.should.be.an.instanceOf(Function);
+          task.reportBadTask.should.be.an.instanceOf(Function);
+          task.completeTask.should.be.an.instanceOf(Function);
+          task.progressTask.should.be.an.instanceOf(Function);
+          task.shutdown();
+        });
+
+        it('should return a valid TaskServer with all options', function(){
             var task = background_task.connect({
                 task: "hey",
                 taskKey: "kid",
@@ -223,21 +279,34 @@ describe('node-background-task', function(){
                 port: "6379",
                 isWorker: true
             });
-            task.should.be.an.Object;
+            task.should.be.an.instanceOf(Object);
+            should.not.exist(task.addTask);
+            task.acceptTask.should.be.an.instanceOf(Function);
+            task.reportTask.should.be.an.instanceOf(Function);
+            task.reportBadTask.should.be.an.instanceOf(Function);
+            task.completeTask.should.be.an.instanceOf(Function);
+            task.progressTask.should.be.an.instanceOf(Function);
             task.shutdown();
         });
 
 
-        it('should return a valid BackgroundTask with some options', function(){
+        it('should return a valid TaskServer with some options', function(){
             var task = background_task.connect({
                 queue: "newQueue",
                 host: "localhost",
                 isWorker: true
             });
-            task.should.be.an.Object;
+            task.should.be.an.instanceOf(Object);
+            should.not.exist(task.addTask);
+            task.acceptTask.should.be.an.instanceOf(Function);
+            task.reportTask.should.be.an.instanceOf(Function);
+            task.reportBadTask.should.be.an.instanceOf(Function);
+            task.completeTask.should.be.an.instanceOf(Function);
+            task.progressTask.should.be.an.instanceOf(Function);
             task.shutdown();
         });
-        it('should be a worker when isWorker: true', function(done){
+
+        it('should be a TaskServer when isWorker: true', function(done){
             bgTaskWorker.on('TASK_AVAILABLE', function(id){
                 bgTaskWorker.acceptTask(id, function(msg){
                     bgTaskWorker.completeTask(id, 'SUCCESS', msg);
@@ -658,6 +727,16 @@ describe('node-background-task', function(){
             });
         });
 
+      describe('#reportTask', function() {
+        var msg = {kid: "reportTask", body: "test"};
+         it('should reject responding to tasks that were not accepted', function(){
+
+          (function(){
+            bgTaskWorker.reportTask("123456", "SUCCESS", msg);
+         }).should.throw('Attempt to respond to message that was never accepted');
+        });
+      });
+
         describe('#completeTask', function(){
             var msg = {kid: "completeTask", body: "test"};
             it('it should reject tasks without ids', function(){
@@ -687,6 +766,7 @@ describe('node-background-task', function(){
 
                 for (i = 0; i < allowed.length; i = i + 1){
                     (function(){
+                        bgTaskWorker.idToChannelMap[id] = "listenerChannel";
                         bgTaskWorker.completeTask(id, allowed[i], msg);
                     }).should.not.throw();
                 }
