@@ -409,6 +409,20 @@ describe('node-background-task', function(){
                 });
             });
 
+          it('should clean up task keys if timeout value exceeded', function(done){
+            var task = background_task.connect({taskKey: "kid", timeout: 200});
+
+            task.addTask({kid: "should timeout", body: "test"}, function(id, reply){
+              reply.should.be.an.instanceOf(Error);
+              reply.message.should.equal('Task timed out');
+              rc.hget("newtask:normal", id, function(err, result) {
+                should.not.exist(result);
+                task.shutdown();
+                done();
+              });
+            });
+          });
+
           it('should use default timeout value if no task timeout value is passed', function(done){
             var task = background_task.connect({taskKey: "kid", timeout: normalTimeoutTime});
             var start = moment();

@@ -1,5 +1,9 @@
 ## Changelog
 
+### 0.6.2
+* Fixed context issue when an error occurs processing a task
+* Added cleanup of keys for when a task times out
+
 ### 0.6.1
 * Several bug fixes
 * Added test coverage for notification bus
