@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.6.3
+* Fix to drop progress notificaiton and ignore when an error occurs
+
 ### 0.6.2
 * Fixed context issue when an error occurs processing a task
 * Added cleanup of keys for when a task times out
