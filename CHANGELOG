@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.6.4
+* Changed payload limit error message
+
 ### 0.6.3
 * Fix to drop progress notificaiton and ignore when an error occurs
 
