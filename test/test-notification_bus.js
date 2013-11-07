@@ -346,7 +346,7 @@ describe('messaging', function(){
 
           notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), msg, "NEWTASK", function(err, reply){
             err.should.be.instanceOf(Error);
-            err.message.should.equal('Payload too large!');
+            err.message.should.match(/^The message has exceeded the payload limit of/);
             done();
           });
         };
