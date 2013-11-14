@@ -4,7 +4,6 @@
 * Changed payload limit error message
 * Changed use of version to API level to allow for mixed versions of the same level to exist
 * Improved precondition error handling
-* Added more informational error messages for exceeding payload
 * Added more informational error message for attempting to respond to a task that wasn't accepted
 
 ### 0.6.3
