@@ -747,7 +747,7 @@ describe('node-background-task', function(){
 
           (function(){
             bgTaskWorker.reportTask("123456", "SUCCESS", msg);
-         }).should.throw('Attempt to respond to message that was never accepted');
+         }).should.throw(/^Attempt to respond to message that was never accepted/);
         });
       });
 
