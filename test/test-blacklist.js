@@ -355,4 +355,57 @@ describe('Blacklist', function(){
             });
         });
     });
+
+    describe('getBlacklistCount', function() {
+      it('should return the count of blacklisted taskKeys', function(done) {
+        var b = new bl.Blacklist({
+          taskKey: "testKey",
+          failureInterval: 10,
+          blacklistThreshold: 1,
+          logBlacklist: true
+        });
+
+        var taskKey1 = "taskKey1";
+        var taskKey2 = "taskKey2";
+        var taskKey3 = "taskKey3";
+        var reason = "Test Blacklist";
+
+        b.addFailure(taskKey1, reason, function(err, result) {
+          b.addFailure(taskKey1, reason, function(err, result) {
+            b.addFailure(taskKey2, reason, function(err, result) {
+              b.addFailure(taskKey2, reason, function(err, result) {
+                b.addFailure(taskKey3, reason, function(err, result) {
+                  b.addFailure(taskKey3, reason, function(err, result) {
+                    b.getBlacklistCount(function(err, result) {
+                      result.should.eql(3);
+                      done();
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+
+        b.getBlacklistCount(function(err, result) {
+          result.should.eql(0);
+          done();
+        });
+      });
+
+      it('should return if no tasks are blacklisted', function(done) {
+        var b = new bl.Blacklist({
+          taskKey: "kid",
+          failureInterval: 10,
+          blacklistThreshold: 1,
+          logBlacklist: true
+        });
+
+        b.getBlacklistCount(function(err, result) {
+          result.should.eql(0);
+          done();
+        });
+      });
+
+    });
 });
