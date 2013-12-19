@@ -45,7 +45,7 @@ describe('node-background-task', function(){
     beforeEach(function(done) {
         rc.flushall();
         bgTask       = background_task.connect({taskKey: "kid", maxTasksPerKey: 2});
-        bgTaskWorker = background_task.connect({isWorker: true});
+        bgTaskWorker = background_task.connect({isWorker: true, taskKey: "testKey"});
 
         // Wait until setup is complete.
         var pending = 2;
@@ -848,6 +848,26 @@ describe('node-background-task', function(){
                 });
 
             });
+        });
+
+        describe('Get blacklist count', function() {
+          it('should get blacklist count', function(done) {
+            var key = "kid_blacklist";
+            var task = {taskKey: key};
+            var bl = new blacklist.Blacklist(task);
+            var count = bgTaskWorker.blacklist.blacklistThreshold + 1;
+            async.timesSeries(count, function(n, next){
+              bgTaskWorker.reportBadTask(key, "blacklist", function(err, result){
+                process.nextTick(next);
+              });
+            }, function(err, result) {
+              bgTaskWorker.getBlacklistCount(function(err, result) {
+                console.log(result);
+                result.should.eql(1);
+                done();
+              });
+            });
+          });
         });
 
         describe('General functionality', function(){
