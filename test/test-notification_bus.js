@@ -354,6 +354,76 @@ describe('messaging', function(){
         testUtils.testWithFile(twoMegs, test);
       });
 
+      it('should allow larger payloads to be set', function(done){
+        var test
+          , twoMegs = 2 * 1024 * 1024
+          , threeMegs = 3 * 1024 * 1024;
+
+        notificationBus = notification.initialize({maxPayloadSize: threeMegs});
+        notificationBusWorker = notification.initialize({isWorker: true, maxPayloadSize: threeMegs});
+
+        test = function(str){
+          var msg = {body: str}
+
+          notificationBusWorker.once('notification_received', function(task){
+            notificationBusWorker.processNotification(task.id, "NEWTASK", function(err, msg){
+              notificationBusWorker.sendNotification(task._listenChannel, task.id, msg, 'SUCCESS');
+            });
+          });
+
+          notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), msg, "NEWTASK", function(err, reply){
+            should.not.exist(err);
+            should.exist(reply);
+            reply.should.match(/^msgChannels:/);
+            done();
+          });
+        };
+
+        testUtils.testWithFile(twoMegs, test);
+      });
+
+      it('should allow client and server payload limits to be different', function(done){
+        var test
+          , twoMegs = 2 * 1024 * 1024
+          , threeMegs = 3 * 1024 * 1024;
+
+
+        notificationBusWorker = notification.initialize({isWorker: true, maxPayloadSize: threeMegs});
+
+        test = function(str){
+          var msg = {body: str}
+          var smallMsg = {body: "Small"};
+
+          notificationBusWorker.on('notification_received', function(task){
+            notificationBusWorker.processNotification(task.id, "NEWTASK", function(err, result){
+              notificationBusWorker.sendNotification(result._listenChannel, task.id, msg, 'SUCCESS');
+            });
+          });
+
+          notificationBus.on('notification_received', function(taskResult) {
+            notificationBus.processNotification(taskResult.id, "SUCCESS", function(err, result) {
+              should.not.exist(err);
+              should.exist(result);
+              JSON.stringify(result).length.should.be.greaterThan(twoMegs);
+              done();
+            });
+          });
+
+          notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), msg, "NEWTASK", function(err, reply){
+            err.should.be.instanceOf(Error);
+            err.message.should.match(/^The message has exceeded the payload limit of/);
+            notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), smallMsg, "NEWTASK", function(err2, result){
+              should.not.exist(err2);
+              should.exist(result);
+              result.should.match(/^msgChannels:/);
+            });
+          });
+
+        };
+
+        testUtils.testWithFile(twoMegs, test);
+      });
+
       it('should reject message that are not JSON', function(done){
         var cback;
         notificationBusWorker.once('notification_received', function(task){
