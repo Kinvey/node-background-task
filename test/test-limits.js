@@ -21,7 +21,7 @@ var sinon = require('sinon')
   , should = require('should')
   , redis = require('redis')
   , async = require('async')
-  , delay = 100; // This allows object creation to always finish
+  , delay = 500; // This allows object creation to always finish
 
 
 describe('Test Limits', function(){
