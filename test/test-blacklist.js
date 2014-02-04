@@ -389,13 +389,12 @@ describe('Blacklist', function(){
 
         b.getBlacklistCount(function(err, result) {
           result.should.eql(0);
-          done();
         });
       });
 
       it('should return if no tasks are blacklisted', function(done) {
         var b = new bl.Blacklist({
-          taskKey: "kid",
+          taskKey: "emptyKid",
           failureInterval: 10,
           blacklistThreshold: 1,
           logBlacklist: true
