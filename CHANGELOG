@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.6.6
+* Added new initialization option, maxPayloadSize, which sets the maximum size for a task message.
+
 ### 0.6.5
 * Updated blacklist addFailure to avoid race condition where the blacklist counter ttl was set to -1
 * Added a method to Task Server getBlacklistCount() to get a count of total # of blacklisted taskKeys
