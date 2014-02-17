@@ -1,5 +1,10 @@
 ## Changelog
 
+### 0.6.7
+* Fixes #14 - Task Limit errors on stopTask were thrown rather than emitted
+* Removes a race condition where a task timeout and task completion could both call TaskLimit.stopTask()
+* Fixed some test case issues where tests were completing with asynchronous code still running
+
 ### 0.6.6
 * Added new initialization option, maxPayloadSize, which sets the maximum size for a task message.
 
