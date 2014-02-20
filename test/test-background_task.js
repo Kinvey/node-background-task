@@ -70,13 +70,14 @@ describe('node-background-task', function(){
 
     describe('Events', function(){
         describe('#emit()', function(){
-            it('should invoke the callback', function(){
+            it('should invoke the callback', function(done){
                 var spy = sinon.spy();
 
 
                 bgTask.on('foo', spy);
                 bgTask.emit('foo');
                 spy.called.should.be.true;
+                done();
             });
 
             it('should emit TASK_DONE when a task completes', function(done){
