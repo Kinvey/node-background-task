@@ -1,5 +1,9 @@
 ## Changelog
 
+### 0.6.8
+* Clean up callbacks prior to calling any asynchronous functions on task response, and check for presence of callbacks before any response
+* Added more error information on TaskLimit.stopTask precondition check
+
 ### 0.6.7
 * Fixes #14 - Task Limit errors on stopTask were thrown rather than emitted
 * Removes a race condition where a task timeout and task completion could both call TaskLimit.stopTask()
