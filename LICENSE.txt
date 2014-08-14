@@ -196,7 +196,8 @@ Summary
     >>> mocha [MIT-style] - unit testing framework
     >>> should [MIT-style] - assertions framework
     >>> sinon [BSD-style] - used for test stubs and mocks
-    >>> precond-0.2.2 [MIT] - used for precondition checks
+    >>> precond-0.2.2 [MIT-style] - used for precondition checks
+    >>> moment [MIT-style] - Date/time library
 
 SECTION 1: BSD-STYLE, MIT-STYLE, OR SIMILAR STYLE LICENSES
 
