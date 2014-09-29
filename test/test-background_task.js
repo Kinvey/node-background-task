@@ -757,7 +757,7 @@ describe('node-background-task', function(){
             it('it should reject tasks without ids', function(){
                 (function() {
                     bgTaskWorker.completeTask(null, 'SUCCESS', msg);
-                }).should.throw('Missing msgId, status or msg.');
+                }).should.throw('Missing taskId, status or msg.');
             });
 
             it('it should reject tasks without a status', function(){
@@ -769,7 +769,7 @@ describe('node-background-task', function(){
             it('it should reject tasks without message', function(){
                 (function() {
                     bgTaskWorker.completeTask("12345", 'SUCCESS', null);
-                }).should.throw('Missing msgId, status or msg.');
+                }).should.throw('Missing taskId, status or msg.');
             });
 
             it('should accept only SUCCESS, ERROR or FAILED for status', function(){
