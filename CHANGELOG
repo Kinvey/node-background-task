@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.7.1
+* Changed description and metadata
+
 ### 0.7.0
 * Added a per-task broadcast channel option to addTask to allow for a single client to send to specific workers
 * Cleaned up unit tests
