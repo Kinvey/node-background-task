@@ -1,5 +1,11 @@
 ## Changelog
 
+### 0.7.0
+* Added a per-task broadcast channel option to addTask to allow for a single client to send to specific workers
+* Cleaned up unit tests
+* Refactored the initialization procedure to provide consistent callbacks
+* Cleaned up error messages
+
 ### 0.6.8
 * Clean up callbacks prior to calling any asynchronous functions on task response, and check for presence of callbacks before any response
 * Added more error information on TaskLimit.stopTask precondition check
