@@ -33,12 +33,12 @@ describe('messaging', function(){
 
     it('should return a valid NotificationBus with or without options', function(done){
         notificationBus = notification.initialize(null, function() {
-        notificationBus.should.have.property('subClient');
-        notificationBus.should.have.property('dataClient');
-        notificationBus.should.have.property('pubClient');
+          notificationBus.should.have.property('subClient');
+          notificationBus.should.have.property('dataClient');
+          notificationBus.should.have.property('pubClient');
 
-        done()
-      });
+          done();
+    });
 
     });
 
