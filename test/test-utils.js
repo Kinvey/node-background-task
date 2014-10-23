@@ -33,7 +33,7 @@ exports.waitForSetup = function(bgTaskOrBus, cb) {
     var next    = function() {
         pending -= 1;
         if(0 === pending) {
-            cb()
+          cb();
         }
     };
     ['dataClient', 'pubClient', 'subClient'].forEach(function(client) {

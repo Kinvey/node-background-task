@@ -49,12 +49,13 @@ describe('Blacklist', function(){
           var messages = [];
           var warnMsg = "";
           console.log = function(args) {
-              messages.push(args);
+            x(args);
+            messages.push(args);
             x.call(this, args);
           };
           var tmpBL = new bl.Blacklist({taskKey: "auth",  password: "invalid"}, function() {
             for (var i = 0; i < messages.length; i++) {
-              if (messages[i] = "Warning: Redis server does not require a password, but a password was supplied.") {
+              if (messages[i] === "Warning: Redis server does not require a password, but a password was supplied.") {
                 warnMsg = messages[i];
               }
             }

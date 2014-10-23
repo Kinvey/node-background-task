@@ -24,46 +24,56 @@ var sinon = require('sinon')
 
 describe('messaging', function(){
   describe('#initialize', function(){
-    it('should return a valid NotificationBus with or without options', function(){
-      var notificationBus = notification.initialize();
+    var notificationBus;
 
-      notificationBus.should.have.property('subClient');
-      notificationBus.should.have.property('dataClient');
-      notificationBus.should.have.property('pubClient');
-
+    afterEach(function(done) {
       notificationBus.shutdown();
+      done();
     });
 
-    it('should return a valid NotificationBus with all options', function(){
-      var notificationBus = notification.initialize({
+    it('should return a valid NotificationBus with or without options', function(done){
+        notificationBus = notification.initialize(null, function() {
+        notificationBus.should.have.property('subClient');
+        notificationBus.should.have.property('dataClient');
+        notificationBus.should.have.property('pubClient');
+
+        done()
+      });
+
+    });
+
+    it('should return a valid NotificationBus with all options', function(done){
+      notificationBus = notification.initialize({
         baseHash: ":someBaseHash",
         hashMap: "someHashMap",
         host: "0.0.0.0",
         port: "6379",
         isResponder: true
+      }, function() {
+        notificationBus.should.have.property('subClient');
+        notificationBus.should.have.property('dataClient');
+        notificationBus.should.have.property('pubClient');
+        notificationBus.baseHash.should.eql(':someBaseHash');
+        notificationBus.hashMap.should.eql('someHashMap');
+        notificationBus.pubClient.client.host.should.eql('0.0.0.0');
+        notificationBus.pubClient.client.port.should.eql('6379');
+        done();
       });
-      notificationBus.should.have.property('subClient');
-      notificationBus.should.have.property('dataClient');
-      notificationBus.should.have.property('pubClient');
-      notificationBus.baseHash.should.eql(':someBaseHash');
-      notificationBus.hashMap.should.eql('someHashMap');
-      notificationBus.pubClient.client.host.should.eql('0.0.0.0');
-      notificationBus.pubClient.client.port.should.eql('6379');
-
-      notificationBus.shutdown();
     });
 
 
-    it('should return a valid NotificationBus with some options', function(){
-      var notificationBus = notification.initialize({
+    it('should return a valid NotificationBus with some options', function(done){
+      notificationBus = notification.initialize({
         host: "localhost",
         isResponder: true
-      });
-      notificationBus.should.have.property('subClient');
-      notificationBus.should.have.property('pubClient');
-      notificationBus.should.have.property('dataClient');
+      }, function() {
+        notificationBus.should.have.property('subClient');
+        notificationBus.should.have.property('pubClient');
+        notificationBus.should.have.property('dataClient');
 
-      notificationBus.shutdown();
+        done();
+      });
+
     });
 
     it('should be a worker when isWorker: true', function(done){
@@ -72,18 +82,16 @@ describe('messaging', function(){
         , message = '{"test":"message", "_messageId": "0xdeadbeef", "_listenChannel":"dummy"}'
         , opts = {baseHash: hashName, isWorker: true}
         , rcPubSub = redis.createClient()
-        , rcData = redis.createClient()
-        , notificationBus = notification.initialize(opts);
+        , rcData = redis.createClient();
 
-      notificationBus.once('notification_received', function(id){
-        notificationBus.processNotification(id._id, status, function(err, msg){
-          notificationBus.shutdown();
-          msg.test.should.eql(JSON.parse(message).test);
-          done();
+      notificationBus = notification.initialize(opts, function() {
+        notificationBus.once('notification_received', function(id){
+          notificationBus.processNotification(id._id, status, function(err, msg){
+            msg.test.should.eql(JSON.parse(message).test);
+            done();
+          });
         });
-      });
 
-      testUtils.waitForSetup(notificationBus, function() {
         rcData.hset(status.toLowerCase() + hashName, "0xdeadbeef", message);
         rcPubSub.publish(notificationBus.broadcastChannel, JSON.stringify({_id:"0xdeadbeef", status: status}));
       });
@@ -100,7 +108,7 @@ describe('messaging', function(){
         x.call(this, args);
       };
 
-      var notificationBus = notification.initialize({password: 'hiFriends'}, function() {
+      notificationBus = notification.initialize({password: 'hiFriends'}, function() {
         for (var i = 0; i < messages.length; i++) {
           if (messages[i] = "Warning: Redis server does not require a password, but a password was supplied.") {
             warnMsg = messages[i];
@@ -121,45 +129,32 @@ describe('messaging', function(){
       , rc = redis.createClient();
 
     beforeEach(function(done){
-      rc.flushall();
 
-      if (notificationBus){
-        notificationBus.shutdown();
-      }
-
-      if (notificationBusWorker){
-        notificationBusWorker.shutdown();
-      }
-
-      notificationBus       = notification.initialize();
-      notificationBusWorker = notification.initialize({isWorker: true});
-
-      // Wait until setup is complete.
-      var pending = 2;
-      var next    = function() {
-        pending -= 1;
-        if(0 === pending) {
+      notificationBus       = notification.initialize(null, function() {
+        notificationBusWorker = notification.initialize({isWorker: true}, function() {
           done();
-        }
-      };
-      testUtils.waitForSetup(notificationBus, next);
-      testUtils.waitForSetup(notificationBusWorker, next);
+        });
+      });
+    });
+
+    afterEach(function(done) {
+      notificationBus.shutdown();
+      notificationBusWorker.shutdown();
+      rc.flushall();
+      done();
     });
 
     describe('Error Handling', function(){
       it('should handle bad items on the worker queue', function(done){
         var status= "biwq";
-        var nBus = notification.initialize({isWorker: true, broadcastChannel: "biwqC"})
-
-        nBus.once('notification_received', function(id){
-          nBus.processNotification(id, status, function(err,rep){
-            err.should.be.an.instanceOf(Error);
-            err.message.should.match(/No message for key/);
-            done();
+        var nBus = notification.initialize({isWorker: true, broadcastChannel: "biwqC"}, function() {
+          nBus.once('notification_received', function(id){
+            nBus.processNotification(id, status, function(err,rep){
+              err.should.be.an.instanceOf(Error);
+              err.message.should.match(/No message for key/);
+              done();
+            });
           });
-        });
-
-        testUtils.waitForSetup(nBus, function() {
           rc.hset(status + nBus.baseHash, "0xdeadbeef", "this is not json");
           rc.publish(nBus.broadcastChannel, JSON.stringify({id: "0xdeadbeef", status: status}));
         });
@@ -167,70 +162,55 @@ describe('messaging', function(){
 
       it('should handle no item on the worker queue', function(done){
         var status = "niwq";
-        var nBus = notification.initialize({isWorker: true, broadcastChannel: "niwqC"})
-
-        nBus.once('notification_received', function(id){
-          nBus.processNotification(id, status, function(err, rep){
-            err.should.be.an.instanceOf(Error);
-            err.message.should.match(/No message for key/);
-            done();
+        var nBus = notification.initialize({isWorker: true, broadcastChannel: "niwqC"}, function() {
+          nBus.once('notification_received', function(id){
+            nBus.processNotification(id, status, function(err, rep){
+              err.should.be.an.instanceOf(Error);
+              err.message.should.match(/No message for key/);
+              done();
+            });
           });
-        });
-
-        testUtils.waitForSetup(nBus, function() {
           rc.publish(nBus.broadcastChannel, JSON.stringify({id: "0xdeadbeef", status: status}));
+
         });
       });
 
       it('should handle a mal-formed message', function(done){
-        var nBus = notification.initialize();
-
-        nBus.on('error', function(err){
+        notificationBus.on('error', function(err){
           err.should.be.an.instanceOf(Error);
           err.message.should.equal('Invalid message received!');
           done();
         });
-
-        testUtils.waitForSetup(nBus, function() {
-          rc.publish(nBus.listenChannel, "NOSPACES");
-        });
+        rc.publish(notificationBus.listenChannel, "NOSPACES");
       });
 
       it('should handle JSON that is corrupt', function(done){
-        var nBus = notification.initialize();
         var status="plkj";
 
-        nBus.once('notification_received', function(id) {
-          nBus.processNotification(id.id, status, function(err, rep){
+        notificationBus.once('notification_received', function(id) {
+          notificationBus.processNotification(id.id, status, function(err, rep){
             err.should.be.an.instanceOf(Error);
             err.message.should.match(/^Bad data in sent message/);
             done();
           });
         });
 
-
-        testUtils.waitForSetup(nBus, function() {
-          rc.hset(status + nBus.baseHash, "0xdeadbeef", "this is not json");
-          rc.publish(nBus.listenChannel, JSON.stringify({id: "0xdeadbeef", status: status}));
-        });
-
+        rc.hset(status + notificationBus.baseHash, "0xdeadbeef", "this is not json");
+        rc.publish(notificationBus.listenChannel, JSON.stringify({id: "0xdeadbeef", status: status}));
       });
 
       it('should handle when an empty item is pulled from the queue', function(done){
-        var  nBus = notification.initialize();
         var status="plkj";
 
-        nBus.once('notification_received', function(id) {
-          nBus.processNotification(id.id, status, function(err, rep){
+        notificationBus.once('notification_received', function(id) {
+          notificationBus.processNotification(id.id, status, function(err, rep){
             err.should.be.an.instanceOf(Error);
             err.message.should.match(/^No message for key/);
             done();
           });
         });
 
-        testUtils.waitForSetup(nBus, function() {
-          rc.publish(nBus.listenChannel, JSON.stringify({id: "0xdeadbeef", status: status}));
-        });
+        rc.publish(notificationBus.listenChannel, JSON.stringify({id: "0xdeadbeef", status: status}));
       });
     });
 
@@ -440,6 +420,48 @@ describe('messaging', function(){
           });
         };
         cback();
+      });
+
+      it('should allow to set the broadcast channel at send', function(done) {
+        var nBus = notification.initialize({isWorker: true, broadcast: "biwqC"}, function() {
+          var stdReceived = false;
+          var customReceived = false;
+
+
+          var verifyCompletion = function() {
+            if (stdReceived && customReceived) {
+              return done();
+            }
+            return;
+          };
+
+          notificationBusWorker.once('notification_received', function(task) {
+            task.id.should.eql('123456');
+            task.id.should.not.eql('654321');
+            stdReceived = true;
+            verifyCompletion();
+            notificationBusWorker.processNotification(task.id, "NEWTASK", function(err, msg) {
+              notificationBusWorker.sendNotification(task._listenChannel, task.id, msg, 'SUCCESS');
+            });
+          });
+
+          nBus.once('notification_received', function(task) {
+            task.id.should.eql('654321');
+            task.id.should.not.eql('123456');
+            customReceived = true;
+            verifyCompletion();
+            nBus.processNotification(task.id, "NEWTASK", function(err, msg) {
+              nBus.sendNotification(task._listenChannel, task.id, msg, 'SUCCESS');
+            });
+          });
+
+          notificationBus.sendNotification('biwqC', '654321', {task: 'message'}, "NEWTASK", function(err, result) {
+            notificationBus.sendNotification(notificationBus.broadcastChannel, '123456', {task: 'message'}, "NEWTASK", function(err, result2) {
+            });
+          });
+        });
+
+
       });
     });
 
