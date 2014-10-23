@@ -678,6 +678,33 @@ describe('node-background-task', function(){
                 cb();
                 cb();
             });
+
+
+            it('should allow a custom broadcast channel to be submitted per task', function(done) {
+              var customBroadcastChannelWorker = background_task.connect({broadcast: "aNewWorker", isWorker: true});
+
+              bgTaskWorker.on('TASK_AVAILABLE', function(id){
+                bgTaskWorker.acceptTask(id, function(msg) {
+                  msg.kid.should.eql('defaultChannel');
+                  bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                });
+              });
+
+              customBroadcastChannelWorker.on('TASK_AVAILABLE', function(id){
+                customBroadcastChannelWorker.acceptTask(id, function(msg) {
+                  msg.kid.should.eql('newChannel');
+                  customBroadcastChannelWorker.completeTask(id, 'SUCCESS', msg);
+                });
+              });
+
+              bgTask.addTask({ kid: 'newChannel' }, {channel: "aNewWorker"}, function(id, reply) {
+                bgTask.addTask({kid: 'defaultChannel'}, function(id, reply) {
+                  done();
+                });
+
+              });
+
+            });
         });
 
         describe('#acceptTask', function(){
