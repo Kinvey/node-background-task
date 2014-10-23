@@ -1,7 +1,7 @@
 {
   "name": "background-task",
   "version": "0.7.0",
-  "description": "Run Node.js tasks on multiple instances.",
+  "description": "Distributed task execution framework for node, backed by redis.",
   "main": "index.js",
   "author": "Kinvey <support@kinvey.com>",
   "contributors": [
@@ -21,7 +21,8 @@
     "node",
     "task",
     "background",
-    "redis"
+    "redis",
+    "distributed"
   ],
   "dependencies": {
     "node-uuid": "*",
