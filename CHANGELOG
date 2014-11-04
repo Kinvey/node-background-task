@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.7.2
+* Delete callback in redis_client on first use, to work around redis bug where ready event is called twice
+
 ### 0.7.1
 * Changed description and metadata
 
