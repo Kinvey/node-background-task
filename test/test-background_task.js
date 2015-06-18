@@ -138,6 +138,16 @@ describe('node-background-task', function(){
                 bgTask.addTask({kid: "emitTaskAvailable", body: "test"}, function(){});
             });
 
+            it('should pass metadata along with task Id when a task is added with metadata', function(done){
+              bgTaskWorker.on('TASK_AVAILABLE',  function(id, metadata){
+                should.exist(id);
+                metadata.should.eql({some:'metadata'});
+                done();
+              });
+
+              bgTask.addTask({kid: "emitTaskAvailable", body: "test"}, {metadata: {some:'metadata'}}, function(){});
+            });
+
             it('should emit TASK_PROGRESS when task progress is reported', function(done) {
                 bgTaskWorker.on('TASK_AVAILABLE', function(id) {
                     bgTaskWorker.acceptTask(id, function(msg) {

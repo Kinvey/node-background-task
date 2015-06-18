@@ -283,6 +283,28 @@ describe('messaging', function(){
         });
       });
 
+      it('should allow metadata to be passed', function(done) {
+        notificationBusWorker.once('notification_received', function(notification) {
+          notification.id.should.eql(cid);
+          notification.metadata.should.eql({some:'metadata'});
+          done();
+        });
+
+        var cid = notification.makeId();
+        notificationBus.sendNotification(notificationBus.broadcastChannel, cid, {'body':'test'}, 'NEWTASK', {some:'metadata'}, function(err, reply){});
+      });
+
+      it('should send message without metadata', function(done) {
+        notificationBusWorker.once('notification_received', function(notification) {
+          notification.id.should.eql(cid);
+          should.not.exist(notification.metadata);
+          done();
+        });
+
+        var cid = notification.makeId();
+        notificationBus.sendNotification(notificationBus.broadcastChannel, cid, {'body':'test'}, 'NEWTASK', function(err, reply){});
+      });
+
       it('should allow for multiple tasks to be added', function(done){
         var count = 5,
           tasksToAdd = [];
