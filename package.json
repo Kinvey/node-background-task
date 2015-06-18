@@ -1,6 +1,6 @@
 {
   "name": "background-task",
-  "version": "0.7.4",
+  "version": "0.8.0",
   "description": "Distributed task execution framework for node, backed by redis.",
   "main": "index.js",
   "author": "Kinvey <support@kinvey.com>",
