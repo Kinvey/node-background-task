@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.8.0
+* Added passing of metadata that gets passed as an argument in TASK_AVAILABLE event
+
 ### 0.7.4
 * Added some redis error handling, and handle addTask callback errors
 
