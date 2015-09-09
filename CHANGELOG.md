@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.9.0
+* Add support for broadcasting tasks
+
 ### 0.8.0
 * Added passing of metadata that gets passed as an argument in TASK_AVAILABLE event
 
