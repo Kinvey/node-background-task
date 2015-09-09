@@ -715,6 +715,61 @@ describe('node-background-task', function(){
               });
 
             });
+
+            it('should allow for a broadcast task', function(done) {
+                var bgTaskWorker2 = background_task.connect({
+                    taskKey: 'testKey',
+                    isWorker: true
+                });
+
+                // Test callback should be called after both workers are done.
+                var counter = 2;
+                var doneCb = function() {
+                    if(0 === counter) {
+                        bgTaskWorker2.shutdown(); // Test-specific worker.
+                        done();
+                    }
+                };
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker.acceptTask(id, function(msg) {
+                        msg.should.not.be.an.instanceof(Error);
+                        msg.kid.should.eql('test');
+                        bgTaskWorker.completeTask(id, 'SUCCESS', msg);
+                        counter -= 1;
+                        doneCb();
+                    });
+                });
+
+                bgTaskWorker2.on('TASK_AVAILABLE', function(id) {
+                    bgTaskWorker2.acceptTask(id, function(msg) {
+                        msg.should.not.be.an.instanceof(Error);
+                        msg.kid.should.eql('test');
+                        bgTaskWorker2.completeTask(id, 'SUCCESS', msg);
+                        counter -= 1;
+                        doneCb();
+                    });
+                });
+
+                var metadata = { broadcast: true };
+                bgTask.addTask({ kid: 'test' }, { metadata: metadata });
+            });
+
+            it('should allow for a specific broadcast timeout', function(done) {
+                var expires = 1;
+
+                bgTaskWorker.on('TASK_AVAILABLE', function(id) {
+                    setTimeout(function() {
+                        bgTaskWorker.acceptTask(id, function(msg) {
+                            msg.should.be.an.instanceof(Error);
+                            done();
+                        });
+                    }, expires * 1000 + 1); // Wait until after broadcast expires.
+                });
+
+                var metadata = { broadcast: true, expires: expires };
+                bgTask.addTask({ kid: 'test' }, { metadata: metadata });
+            });
         });
 
         describe('#acceptTask', function(){
