@@ -1,5 +1,9 @@
 ## Changelog
 
+### 0.9.1
+* Pinned dependencies
+* Updated license and dependency information
+
 ### 0.9.0
 * Add support for broadcasting tasks
 
