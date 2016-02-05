@@ -17,6 +17,7 @@
   "scripts": {
     "test": "mocha"
   },
+  "license": "Apache-2.0",
   "keywords": [
     "node",
     "task",
@@ -25,16 +26,16 @@
     "distributed"
   ],
   "dependencies": {
-    "node-uuid": "*",
-    "async": "0.2.x",
+    "node-uuid": "1.4.7",
+    "async": "0.2.10",
     "redis": "0.8.6",
     "precond": "0.2.2"
   },
   "devDependencies": {
-    "should": "*",
-    "mocha": "*",
-    "sinon": "*",
-    "moment": "*"
+    "should": "8.0.1",
+    "mocha": "2.3.4",
+    "sinon": "1.17.2",
+    "moment": "2.10.6"
   },
   "directories": {
     "lib": ".",
