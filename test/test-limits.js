@@ -119,7 +119,7 @@ describe('Test Limits', function () {
       unlimTaskLimit.startTask(task, function (v) {
         setTimeout(function () {
           rc.llen(key, function (err, r) {
-            console.log('r: ' + r);
+            r.should.eql(0);
             done();
           });
         }, delay);
