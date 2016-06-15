@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.0.0
+* Enable unlimited task clients with `-1` 'maxTasksPerKey' config value
+* Dropped support for node.js < 4.x
+* Added official support for node.js 4.x and node.js 6.x
+
 ### 0.9.1
 * Pinned dependencies
 * Updated license and dependency information
