@@ -1093,9 +1093,9 @@ describe('node-background-task', function () {
           });
 
           var metadata = {broadcast: true};
-          process.nextTick(function () {
+          setTimeout(function () {
             bgTask.addTask({kid: 'test'}, {metadata: metadata});
-          });
+          }, 500);
         });
       });
     });
