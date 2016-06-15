@@ -113,11 +113,24 @@ describe('Test Limits', function () {
   });
 
   describe('#startTask', function () {
+    it('should not increment the task counter for limitless clients', function (done) {
+      var unlimTaskLimit = new limits.TaskLimit({taskKey: "a", maxTasksPerKey: -1});
+      var key = unlimTaskLimit.keyPrefix + task.a;
+      unlimTaskLimit.startTask(task, function (v) {
+        setTimeout(function () {
+          rc.llen(key, function (err, r) {
+            r.should.eql(0);
+            done();
+          });
+        }, delay);
+      });
+    });
+
     it('should increment the task counter', function (done) {
       var key = taskLimit.keyPrefix + task.a;
       taskLimit.startTask(task, function (v) {
         setTimeout(function () {
-          rc.llen(taskLimit.keyPrefix + task.a, function (err, r) {
+          rc.llen(key, function (err, r) {
             r.should.eql(v);
             done();
           });

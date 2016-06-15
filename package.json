@@ -26,10 +26,11 @@
     "distributed"
   ],
   "dependencies": {
-    "node-uuid": "1.4.7",
     "async": "0.2.10",
-    "redis": "0.8.6",
-    "precond": "0.2.2"
+    "lodash.isnil": "4.0.0",
+    "node-uuid": "1.4.7",
+    "precond": "0.2.2",
+    "redis": "0.8.6"
   },
   "devDependencies": {
     "should": "8.0.1",
@@ -48,7 +49,7 @@
     }
   ],
   "engine": {
-    "node": ">=0.6"
+    "node": ">=4"
   },
   "optionalDependencies": {},
   "engines": {
