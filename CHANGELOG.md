@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.0.1
+* Updated source code and unit test formatting
+
 ### 1.0.0
 * Enable unlimited task clients with `-1` 'maxTasksPerKey' config value
 * Dropped support for node.js < 4.x
