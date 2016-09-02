@@ -84,6 +84,7 @@ describe('node-background-task', function() {
 
       it('should emit TASK_DONE when a task completes', function(done) {
         var tid;
+        var taskDone = false;
         bgTaskWorker.on('TASK_AVAILABLE', function(id) {
           bgTaskWorker.acceptTask(id, function(msg) {
             tid = id;
@@ -92,12 +93,14 @@ describe('node-background-task', function() {
         });
 
         bgTask.on('TASK_DONE', function(id, reply) {
+          taskDone = true;
           id.should.equal(tid);
           reply.should.eql({kid: "kidEmitTaskDone", body: "test"});
-          done();
         });
 
         bgTask.addTask({kid: "kidEmitTaskDone", body: "test"}, function() {
+          taskDone.should.eql(true);
+          done();
         });
       });
 
@@ -105,7 +108,7 @@ describe('node-background-task', function() {
       // when one task completes, instead of when each task actually
       // completes.
       it('should emit TASK_DONE for each task when it completes', function(done) {
-        var completed = 0, pending = 2;
+        var completed = 0, pending = 2, doneCount = 0, isDone = false;
 
         // Complete tasks with some delay between them.
         bgTaskWorker.on('TASK_AVAILABLE', function(id) {
@@ -121,14 +124,23 @@ describe('node-background-task', function() {
           pending -= 1;
           if (0 === pending) {
             completed.should.equal(2);
-            done();
           }
         });
 
         // Add two tasks.
         bgTask.addTask({kid: 'kidEmitTaskDone'}, function() {
+          doneCount += 1;
+          if (2 === doneCount && isDone === false) {
+            isDone = true;
+            done();
+          }
         });
         bgTask.addTask({kid: 'kidEmitTaskDone'}, function() {
+          doneCount += 1;
+          if (2 === doneCount && isDone === false) {
+            isDone = true;
+            done();
+          }
         });
       });
 
@@ -136,11 +148,11 @@ describe('node-background-task', function() {
         bgTaskWorker.on('TASK_AVAILABLE', function(id) {
           bgTaskWorker.acceptTask(id, function(msg) {
             bgTaskWorker.completeTask(id, 'SUCCESS', msg);
-            done();
           });
         });
 
         bgTask.addTask({kid: "emitTaskAvailable", body: "test"}, function() {
+          done();
         });
       });
 
