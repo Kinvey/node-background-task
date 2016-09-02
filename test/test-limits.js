@@ -29,7 +29,7 @@ describe('Test Limits', function() {
 
   before(function(done) {
     taskLimit = new limits.TaskLimit({taskKey: "a", maxTasksPerKey: 5}, function() {
-      rc = new Redis();
+      rc = new Redis({ dropBufferSupprt: true });
       rc.flushall();
       task = {a: "kid1234", msg: "Hi Mom!"};
       done();
@@ -50,7 +50,7 @@ describe('Test Limits', function() {
 
       var limit = new limits.TaskLimit({taskKey: "auth", password: "invalid", maxTasksPerKey: 5}, function() {
         console.log(spy.args);
-        spy.args[1][0].should.eql("[WARN] Redis server does not require a password, but a password was supplied.");
+        spy.args.should.containEql(["[WARN] Redis server does not require a password, but a password was supplied."]);
         spy.restore();
         done();
       });

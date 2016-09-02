@@ -53,7 +53,7 @@ describe('Blacklist', function() {
       var spy = sinon.spy(console, 'warn');
 
       var tmpBL = new bl.Blacklist({taskKey: "auth", password: "invalid"}, function() {
-        spy.args[0][0].should.eql("[WARN] Redis server does not require a password, but a password was supplied.");
+        spy.args.should.containEql([ "[WARN] Redis server does not require a password, but a password was supplied." ]);
         spy.restore();
         done();
       });

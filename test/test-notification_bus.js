@@ -108,7 +108,7 @@ describe('messaging', function() {
       var spy = sinon.spy(console, 'warn');
 
       notificationBus = notification.initialize({password: 'hiFriends'}, function() {
-        spy.args[0][0].should.eql("[WARN] Redis server does not require a password, but a password was supplied.");
+        spy.args.should.containEql([ "[WARN] Redis server does not require a password, but a password was supplied." ]);
         spy.restore();
         notificationBus.shutdown();
         done();
