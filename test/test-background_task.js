@@ -61,6 +61,9 @@ describe('node-background-task', function() {
 
   afterEach(function(done) {
     async.parallel([bgTask.shutdown.bind(bgTask), bgTaskWorker.shutdown.bind(bgTaskWorker)], function() {
+      bgTask = null;
+      bgTaskWorker = null;
+
       setTimeout(function() {
         done();
       }, 200);
