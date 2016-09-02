@@ -19,7 +19,7 @@
 var sinon = require('sinon')
   , bl = require('../lib/blacklist')
   , should = require('should')
-  , redis = require('redis')
+  , Redis = require('ioredis')
   , async = require('async')
   , delay = 500; // This allows object creation to always finish
 
@@ -28,11 +28,13 @@ describe('Blacklist', function() {
   var blacklist, rc, task;
 
   before(function(done) {
-    blacklist = new bl.Blacklist({taskKey: "a"});
-    rc = redis.createClient();
-    rc.flushall();
-    task = {a: "kid1234", msg: "Hi Mom!"};
-    done();
+    blacklist = new bl.Blacklist({taskKey: "a"}, function() {
+      rc = new Redis({ dropBufferSupport: true });
+      rc.flushall();
+      task = {a: "kid1234", msg: "Hi Mom!"};
+      done();
+    });
+
   });
 
   beforeEach(function(done) {
@@ -45,22 +47,14 @@ describe('Blacklist', function() {
     it('should verify that authentication works', function(done) {
       // have to augment console.log as version 0.8.5 of redis no longer throws an error when a password
       // is supplied but none is required,
-      var x = console.log;
       var messages = [];
       var warnMsg = "";
-      console.log = function(args) {
-        x(args);
-        messages.push(args);
-        x.call(this, args);
-      };
+      var count = 0;
+      var spy = sinon.spy(console, 'warn');
+
       var tmpBL = new bl.Blacklist({taskKey: "auth", password: "invalid"}, function() {
-        for (var i = 0; i < messages.length; i++) {
-          if (messages[i] === "Warning: Redis server does not require a password, but a password was supplied.") {
-            warnMsg = messages[i];
-          }
-        }
-        warnMsg.should.eql("Warning: Redis server does not require a password, but a password was supplied.");
-        console.log = x;
+        spy.args[0][0].should.eql("[WARN] Redis server does not require a password, but a password was supplied.");
+        spy.restore();
         done();
       });
 

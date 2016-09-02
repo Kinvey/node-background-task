@@ -17,7 +17,7 @@
 var sinon = require('sinon')
   , notification = require('../lib/notification_bus')
   , should = require('should')
-  , redis = require('redis')
+  , Redis = require('ioredis')
   , util = require('util')
   , testUtils = require('./test-utils')
   , async = require('async');
@@ -27,8 +27,9 @@ describe('messaging', function() {
     var notificationBus;
 
     afterEach(function(done) {
-      notificationBus.shutdown();
-      done();
+      notificationBus.shutdown(function() {
+        done();
+      });
     });
 
     it('should return a valid NotificationBus with or without options', function(done) {
@@ -55,8 +56,8 @@ describe('messaging', function() {
         notificationBus.should.have.property('pubClient');
         notificationBus.baseHash.should.eql(':someBaseHash');
         notificationBus.hashMap.should.eql('someHashMap');
-        notificationBus.pubClient.client.host.should.eql('0.0.0.0');
-        notificationBus.pubClient.client.port.should.eql('6379');
+        notificationBus.pubClient.redisHost.should.eql('0.0.0.0');
+        notificationBus.pubClient.redisPort.should.eql('6379');
         done();
       });
     });
@@ -81,8 +82,8 @@ describe('messaging', function() {
         , status = 'SUCCESS'
         , message = '{"test":"message", "_messageId": "0xdeadbeef", "_listenChannel":"dummy"}'
         , opts = {baseHash: hashName, isWorker: true}
-        , rcPubSub = redis.createClient()
-        , rcData = redis.createClient();
+        , rcPubSub = new Redis()
+        , rcData = new Redis()
 
       notificationBus = notification.initialize(opts, function() {
         notificationBus.once('notification_received', function(id) {
@@ -103,19 +104,12 @@ describe('messaging', function() {
       var x = console.log;
       var messages = [];
       var warnMsg = "";
-      console.log = function(args) {
-        messages.push(args);
-        x.call(this, args);
-      };
+
+      var spy = sinon.spy(console, 'warn');
 
       notificationBus = notification.initialize({password: 'hiFriends'}, function() {
-        for (var i = 0; i < messages.length; i++) {
-          if (messages[i] = "Warning: Redis server does not require a password, but a password was supplied.") {
-            warnMsg = messages[i];
-          }
-        }
-        warnMsg.should.eql("Warning: Redis server does not require a password, but a password was supplied.");
-        console.log = x;
+        spy.args[0][0].should.eql("[WARN] Redis server does not require a password, but a password was supplied.");
+        spy.restore();
         notificationBus.shutdown();
         done();
       });
@@ -126,7 +120,7 @@ describe('messaging', function() {
   describe('NotificationBus', function() {
     var notificationBus
       , notificationBusWorker
-      , rc = redis.createClient();
+      , rc = new Redis();
 
     beforeEach(function(done) {
 
@@ -138,10 +132,12 @@ describe('messaging', function() {
     });
 
     afterEach(function(done) {
-      notificationBus.shutdown();
-      notificationBusWorker.shutdown();
-      rc.flushall();
-      done();
+      notificationBus.shutdown(function() {
+        notificationBusWorker.shutdown(function() {
+          rc.flushall();
+          done();
+        });
+      });
     });
 
     describe('Error Handling', function() {
@@ -363,27 +359,29 @@ describe('messaging', function() {
           , twoMegs = 2 * 1024 * 1024
           , threeMegs = 3 * 1024 * 1024;
 
-        notificationBus = notification.initialize({maxPayloadSize: threeMegs});
-        notificationBusWorker = notification.initialize({isWorker: true, maxPayloadSize: threeMegs});
+        notificationBus = notification.initialize({maxPayloadSize: threeMegs}, function() {
+          notificationBusWorker = notification.initialize({isWorker: true, maxPayloadSize: threeMegs}, function() {
+            test = function(str) {
+              var msg = {body: str};
 
-        test = function(str) {
-          var msg = {body: str}
+              notificationBusWorker.once('notification_received', function(task) {
+                notificationBusWorker.processNotification(task.id, "NEWTASK", function(err, msg) {
+                  notificationBusWorker.sendNotification(task._listenChannel, task.id, msg, 'SUCCESS');
+                });
+              });
 
-          notificationBusWorker.once('notification_received', function(task) {
-            notificationBusWorker.processNotification(task.id, "NEWTASK", function(err, msg) {
-              notificationBusWorker.sendNotification(task._listenChannel, task.id, msg, 'SUCCESS');
-            });
+              notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), msg, "NEWTASK", function(err, reply) {
+                should.not.exist(err);
+                should.exist(reply);
+                reply.should.match(/^msgChannels:/);
+                done();
+              });
+            };
+
+            testUtils.testWithFile(twoMegs, test);
           });
+        });
 
-          notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), msg, "NEWTASK", function(err, reply) {
-            should.not.exist(err);
-            should.exist(reply);
-            reply.should.match(/^msgChannels:/);
-            done();
-          });
-        };
-
-        testUtils.testWithFile(twoMegs, test);
       });
 
       it('should allow client and server payload limits to be different', function(done) {
@@ -392,40 +390,41 @@ describe('messaging', function() {
           , threeMegs = 3 * 1024 * 1024;
 
 
-        notificationBusWorker = notification.initialize({isWorker: true, maxPayloadSize: threeMegs});
+        notificationBusWorker = notification.initialize({isWorker: true, maxPayloadSize: threeMegs}, function() {
 
-        test = function(str) {
-          var msg = {body: str}
-          var smallMsg = {body: "Small"};
+          test = function (str) {
+            var msg = {body: str}
+            var smallMsg = {body: "Small"};
 
-          notificationBusWorker.on('notification_received', function(task) {
-            notificationBusWorker.processNotification(task.id, "NEWTASK", function(err, result) {
-              notificationBusWorker.sendNotification(result._listenChannel, task.id, msg, 'SUCCESS');
+            notificationBusWorker.on('notification_received', function (task) {
+              notificationBusWorker.processNotification(task.id, "NEWTASK", function (err, result) {
+                notificationBusWorker.sendNotification(result._listenChannel, task.id, msg, 'SUCCESS');
+              });
             });
-          });
 
-          notificationBus.on('notification_received', function(taskResult) {
-            notificationBus.processNotification(taskResult.id, "SUCCESS", function(err, result) {
-              should.not.exist(err);
-              should.exist(result);
-              JSON.stringify(result).length.should.be.greaterThan(twoMegs);
-              done();
+            notificationBus.on('notification_received', function (taskResult) {
+              notificationBus.processNotification(taskResult.id, "SUCCESS", function (err, result) {
+                should.not.exist(err);
+                should.exist(result);
+                JSON.stringify(result).length.should.be.greaterThan(twoMegs);
+                done();
+              });
             });
-          });
 
-          notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), msg, "NEWTASK", function(err, reply) {
-            err.should.be.instanceOf(Error);
-            err.message.should.match(/^The message has exceeded the payload limit of/);
-            notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), smallMsg, "NEWTASK", function(err2, result) {
-              should.not.exist(err2);
-              should.exist(result);
-              result.should.match(/^msgChannels:/);
+            notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), msg, "NEWTASK", function (err, reply) {
+              err.should.be.instanceOf(Error);
+              err.message.should.match(/^The message has exceeded the payload limit of/);
+              notificationBus.sendNotification(notificationBus.broadcastChannel, notification.makeId(), smallMsg, "NEWTASK", function (err2, result) {
+                should.not.exist(err2);
+                should.exist(result);
+                result.should.match(/^msgChannels:/);
+              });
             });
-          });
 
-        };
+          };
 
-        testUtils.testWithFile(twoMegs, test);
+          testUtils.testWithFile(twoMegs, test);
+        });
       });
 
       it('should reject message that are not JSON', function(done) {
@@ -484,8 +483,6 @@ describe('messaging', function() {
             });
           });
         });
-
-
       });
     });
 
