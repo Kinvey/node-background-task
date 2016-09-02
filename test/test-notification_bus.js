@@ -56,8 +56,8 @@ describe('messaging', function() {
         notificationBus.should.have.property('pubClient');
         notificationBus.baseHash.should.eql(':someBaseHash');
         notificationBus.hashMap.should.eql('someHashMap');
-        notificationBus.pubClient.redisHost.should.eql('0.0.0.0');
-        notificationBus.pubClient.redisPort.should.eql('6379');
+        notificationBus.pubClient.redisOptions.host.should.eql('0.0.0.0');
+        notificationBus.pubClient.redisOptions.port.should.eql('6379');
         done();
       });
     });
