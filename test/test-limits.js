@@ -247,17 +247,26 @@ describe('Test Limits', function() {
 
     });
     it('should clean up key all tasks created by the current host', function(done) {
-      var key = taskLimit.redisKeyPrefix + task.a;
+      var key = taskLimit.keyPrefix + task.a;
       async.times(5, function(n, next) {
-        taskLimit.startTask(task, function() {
-          next();
+        taskLimit.startTask(task, function(tasks) {
+          if (tasks instanceof Error) {
+            return next(tasks);
+          }
+          return next();
         })
-      }, function() {
+      }, function(err) {
+        if (err) {
+          return done(err);
+        }
         setTimeout(function() {
-          taskLimit.cleanupTasks(function() {
-            rc.llen(key, function(err, len) {
-              len.should.equal(0);
-              done();
+          rc.llen(key, function(err, len) {
+            len.should.eql(5);
+            taskLimit.cleanupTasks(function () {
+              rc.llen(key, function (err, len) {
+                len.should.eql(0);
+                done();
+              });
             });
           });
         }, delay);
