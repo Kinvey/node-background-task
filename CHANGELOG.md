@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.0.2
+* Fixed taskLimit cleanup code
+
 ### 1.0.1
 * Updated source code and unit test formatting
 
