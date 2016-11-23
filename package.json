@@ -28,9 +28,9 @@
   "dependencies": {
     "async": "0.2.10",
     "lodash.isnil": "4.0.0",
-    "node-uuid": "1.4.7",
     "precond": "0.2.2",
-    "redis": "0.8.6"
+    "redis": "0.8.6",
+    "uuid": "^3.0.0"
   },
   "devDependencies": {
     "should": "8.0.1",
