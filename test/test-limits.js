@@ -19,7 +19,7 @@
 var sinon = require('sinon')
   , limits = require('../lib/task_limit')
   , should = require('should')
-  , redis = require('redis')
+  , Redis = require('ioredis')
   , async = require('async')
   , delay = 500; // This allows object creation to always finish
 
@@ -28,11 +28,12 @@ describe('Test Limits', function() {
   var taskLimit, rc, task;
 
   before(function(done) {
-    taskLimit = new limits.TaskLimit({taskKey: "a", maxTasksPerKey: 5});
-    rc = redis.createClient();
-    rc.flushall();
-    task = {a: "kid1234", msg: "Hi Mom!"};
-    done();
+    taskLimit = new limits.TaskLimit({taskKey: "a", maxTasksPerKey: 5}, function() {
+      rc = new Redis({ dropBufferSupprt: true });
+      rc.flushall();
+      task = {a: "kid1234", msg: "Hi Mom!"};
+      done();
+    });
   });
 
   beforeEach(function(done) {
@@ -44,21 +45,13 @@ describe('Test Limits', function() {
     it('should verify that authentication works', function(done) {
       // have to augment console.log as version 0.8.5 of redis no longer throws an error when a password
       // is supplied but none is required,
-      var x = console.log;
-      var messages = [];
-      var warnMsg = "";
-      console.log = function(args) {
-        messages.push(args);
-        x.call(this, args);
-      };
+
+      var spy = sinon.spy(console, 'warn');
+
       var limit = new limits.TaskLimit({taskKey: "auth", password: "invalid", maxTasksPerKey: 5}, function() {
-        for (var i = 0; i < messages.length; i++) {
-          if (messages[i] = "Warning: Redis server does not require a password, but a password was supplied.") {
-            warnMsg = messages[i];
-          }
-        }
-        warnMsg.should.eql("Warning: Redis server does not require a password, but a password was supplied.");
-        console.log = x;
+        console.log(spy.args);
+        spy.args.should.containEql(["[WARN] Redis server does not require a password, but a password was supplied."]);
+        spy.restore();
         done();
       });
     });
