@@ -33,7 +33,7 @@ tasks. Workers listen for events tagged with a specific *task* and
 execute them. Should no worker execute the task in a specific time
 (which can be customized) then a failure is reported back.
 
-Additionally, the amount of active tasks can be limited using a "task
+Additionally, the number of active tasks can be limited using a "task
 key" (which must be a property at the top level of you task object),
 where only N tasks can be pending on a certain key prior to failures.
 
