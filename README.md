@@ -6,7 +6,6 @@ node-background-task
 Distributed task execution framework for [node](http://nodejs.org), backed by [redis](http://redis.io/).
 [![Build Status](https://travis-ci.org/Kinvey/node-background-task.png)](https://travis-ci.org/Kinvey/node-background-task)
 
-
 ```js
 var bgTask = require('background-task').connect({ taskKey: 'someKey' })
   , task;
@@ -20,6 +19,13 @@ bgTask.addTask(task, function(resp){
     console.log(resp);
 });
 ```
+
+## Migrating from v1 to v2
+
+v2 of NBT has switched from using the `node_redis` module to using `ioredis`.  The `host`, `password`, and `port` keys in the
+options object that is used when initializing a client/server are deprecated.  Use `redisOptions` instead.
+
+The `shutdown` method now contains an optional callback.
 
 ## Installation
 
@@ -59,20 +65,24 @@ will handle the task.
   callback must accept two args, `id` and a paramater for the task.
 * `completeTask(taskId, status, msg)` -- Mark a task as complete.
 * `progressTask(taskId, msg)` -- Report task progress.
+* `shutdown(callback` -- Shuts down NBT
 
 
 ### Options
 
 The `options` hash for creators and workers allows you to set:
 
-* `host` -- redis host.
+* `redisOptions` -- The redis options object.  Supports all options used by [ioredis v2.4.2](https://github.com/luin/ioredis/blob/v2.4.2/API.md#new-redisport-host-options)
 * `maxTasksPerKey` -- limit the amount of active tasks based on the "task key".
-* `password` -- redis password.
-* `port` -- redis port.
 * `taskKey` -- the task key.
 * `task` -- listen for specific tasks only.
 * `timeout` -- task timeout (in ms).
 
+The following options are deprecated and will be removed in the next major release of this library.  Use `redisOptions` instead.
+
+* **DEPRECATED** `password` -- redis password.
+* **DEPRECATED** `host` -- redis host.
+* **DEPRECATED** `port` -- redis port.
 
 ### Events
 
