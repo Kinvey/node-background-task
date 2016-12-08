@@ -94,7 +94,9 @@ describe('messaging', function() {
         });
 
         rcData.hset(status.toLowerCase() + hashName, "0xdeadbeef", message);
-        rcPubSub.publish(notificationBus.broadcastChannel, JSON.stringify({_id: "0xdeadbeef", status: status}));
+        setImmediate(function() {
+          rcPubSub.publish(notificationBus.broadcastChannel, JSON.stringify({_id: "0xdeadbeef", status: status}));
+        });
       });
     });
 
