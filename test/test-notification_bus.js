@@ -153,8 +153,10 @@ describe('messaging', function() {
               done();
             });
           });
-          rc.hset(status + nBus.baseHash, "0xdeadbeef", "this is not json");
-          rc.publish(nBus.broadcastChannel, JSON.stringify({id: "0xdeadbeef", status: status}));
+          setImmediate(function() {
+            rc.hset(status + nBus.baseHash, "0xdeadbeef", "this is not json");
+            rc.publish(nBus.broadcastChannel, JSON.stringify({id: "0xdeadbeef", status: status}));
+          });
         });
       });
 
