@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2.0.1
+* Added some debugging info to acceptTask unusual errors
+
 ### 2.0.0
 * DEPRECATED:  `host`, `port`, and `password` keys are deprecated from initialization options
 * Initialization options object now takes `redisOptions` object, which can contain any parameters that are part of the [ioredis initialization object](https://github.com/luin/ioredis/blob/v2.4.2/API.md#new-redisport-host-options) except `dropBufferSupport`, which is always true.  
