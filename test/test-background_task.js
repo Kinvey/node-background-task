@@ -877,10 +877,10 @@ describe('node-background-task', function() {
           });
 
           bgTaskWorker3.on('TASK_AVAILABLE', function (id) {
-            bgTaskWorker2.acceptTask(id, function (msg) {
+            bgTaskWorker3.acceptTask(id, function (msg) {
               msg.should.not.be.an.instanceof(Error);
               msg.kid.should.eql('test');
-              bgTaskWorker2.completeTask(id, 'SUCCESS', msg);
+              bgTaskWorker3.completeTask(id, 'SUCCESS', msg);
               counter -= 1;
               doneCb();
             });
@@ -1207,10 +1207,10 @@ describe('node-background-task', function() {
             });
 
             bgTaskWorker3.on('TASK_AVAILABLE', function (id) {
-              bgTaskWorker2.acceptTask(id, function (msg) {
+              bgTaskWorker3.acceptTask(id, function (msg) {
                 msg.should.not.be.an.instanceof(Error);
                 msg.kid.should.eql('test');
-                bgTaskWorker2.completeTask(id, 'SUCCESS', msg);
+                bgTaskWorker3.completeTask(id, 'SUCCESS', msg);
                 counter -= 1;
                 doneCb();
               });
