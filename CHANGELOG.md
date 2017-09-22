@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2.0.2
+* Added console logging of errors when sending a task from a server
+
 ### 2.0.1
 * Added some debugging info to acceptTask unusual errors
 
